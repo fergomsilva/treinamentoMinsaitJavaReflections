@@ -37,7 +37,7 @@ public class ClassExplorer{
                 }
             }
         }catch( Exception e ){
-            WebFrameworkLogger.error( "Class Explorer", e.getLocalizedMessage(), e );
+            WebFrameworkLogger.error( "Class Explorer", e, e.getLocalizedMessage() );
         }
         return classNames;
     }

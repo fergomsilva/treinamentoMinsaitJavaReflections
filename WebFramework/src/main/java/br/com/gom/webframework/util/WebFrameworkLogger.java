@@ -35,20 +35,29 @@ public class WebFrameworkLogger{
     }
 
     @SuppressWarnings( { "all" } )
-    public static void log(final String modulo, final String mensagem){
-        System.out.printf( TXT_LOG, LocalDateTime.now().format( WEB_FRAMEWORKDATE ), 
-            modulo, mensagem ).println();
+    public static void log(final String modulo, final String mensagem, final Object... params){
+        if( params == null || params.length == 0 )
+            System.out.printf( TXT_LOG, LocalDateTime.now().format( WEB_FRAMEWORKDATE ), 
+                modulo, mensagem ).println();
+        else
+            System.out.printf( TXT_LOG, LocalDateTime.now().format( WEB_FRAMEWORKDATE ), 
+                modulo, String.format( mensagem, params ) ).println();
     }
 
     @SuppressWarnings( { "all" } )
-    public static void error(final String modulo, final String mensagem){
-        System.out.printf( TXT_LOG_ERROR, LocalDateTime.now().format( WEB_FRAMEWORKDATE ), 
-            modulo, mensagem ).println();
+    public static void error(final String modulo, final String mensagem, final Object... params){
+        if( params == null || params.length == 0 )
+            System.out.printf( TXT_LOG_ERROR, LocalDateTime.now().format( WEB_FRAMEWORKDATE ), 
+                modulo, mensagem ).println();
+        else
+            System.out.printf( TXT_LOG_ERROR, LocalDateTime.now().format( WEB_FRAMEWORKDATE ), 
+                modulo, String.format( mensagem, params ) ).println();
     }
 
     @SuppressWarnings( { "all" } )
-    public static void error(final String modulo, final String mensagem, final Exception e){
-        error( modulo, mensagem );
+    public static void error(final String modulo, final Exception e, final String mensagem, 
+    final Object... params){
+        error( modulo, mensagem, params );
         e.printStackTrace();
     }
 

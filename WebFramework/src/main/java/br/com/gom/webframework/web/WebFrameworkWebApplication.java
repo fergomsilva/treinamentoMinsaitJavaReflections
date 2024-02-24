@@ -13,12 +13,14 @@ import br.com.gom.webframework.annotations.WebFrameworkGetMethod;
 import br.com.gom.webframework.annotations.WebFrameworkPostMethod;
 import br.com.gom.webframework.datastructures.ControllerMap;
 import br.com.gom.webframework.datastructures.RequestControllerData;
+import br.com.gom.webframework.datastructures.ServiceImplementationMap;
 import br.com.gom.webframework.explorer.ClassExplorer;
 import br.com.gom.webframework.util.WebFrameworkLogger;
 
 
 public class WebFrameworkWebApplication{
     private static final String LOG_MODULO = "Embeded Web Container";
+    private static final String LOG_MODULO_METADATA = "Metadata Explorer";
 
     private WebFrameworkWebApplication(){
         super();
@@ -35,10 +37,7 @@ public class WebFrameworkWebApplication{
             "Iniciando WebFrameworkWebApplication!" );
         try{
             // class explorer
-            // começar a criar um metodo de extracao de metadados
-            /*final List<String> allClasses = ClassExplorer.retrieveAllClasses( sourceClass );
-            allClasses.forEach( item -> 
-                WebFrameworkLogger.log( "Class Explorer", ( "Class found: " + item ) ) );*/
+            // extracao de metadados
             extractMetadata( sourceClass );
 
             final Tomcat tomcat = new Tomcat();
@@ -59,14 +58,13 @@ public class WebFrameworkWebApplication{
                 "WebFrameworkDispacherServlet" );
 
             final long fim = System.currentTimeMillis();
-            WebFrameworkLogger.log( LOG_MODULO, 
-                "Tomcat iniciado em " + (double)(fim - ini) + "ms" );
+            WebFrameworkLogger.log( LOG_MODULO, "Tomcat iniciado em %dms", (fim - ini) );
 
             // start
             tomcat.start();
             tomcat.getServer().await();
         }catch( Exception e ){
-            WebFrameworkLogger.error( LOG_MODULO, e.getLocalizedMessage(), e );
+            WebFrameworkLogger.error( LOG_MODULO, e, e.getLocalizedMessage() );
         }
     }
 
@@ -78,8 +76,14 @@ public class WebFrameworkWebApplication{
                 final Annotation[] annotations = Class.forName( classe ).getAnnotations();
                 for( Annotation classAnnotation : annotations ){
                     if( classAnnotation.annotationType().getName().equals( "br.com.gom.webframework.annotations.WebFrameworkController" ) ){
-                        WebFrameworkLogger.log( "Metadata Explorer", ( "Found a controller " + classe ) );
+                        WebFrameworkLogger.log( LOG_MODULO_METADATA, "Found a controller %s", classe );
                         extractMethods( classe );
+                    }else if( classAnnotation.annotationType().getName().equals( "br.com.gom.webframework.annotations.WebFrameworkService" ) ){
+                        WebFrameworkLogger.log( LOG_MODULO_METADATA, "Found a service Implementation %s", classe );
+                        for( Class<?> interfaceWeb : Class.forName( classe ).getInterfaces() ){
+                            WebFrameworkLogger.log( LOG_MODULO_METADATA, "Class implements %s", interfaceWeb.getName() );
+                            ServiceImplementationMap.implementations.put( interfaceWeb.getName(), classe );
+                        }
                     }
                 }
             }
@@ -87,7 +91,7 @@ public class WebFrameworkWebApplication{
                 WebFrameworkLogger.log( "", item.toString() );
             }
         }catch( Exception e ){
-            WebFrameworkLogger.error( "Metadata Explorer", e.getLocalizedMessage(), e );
+            WebFrameworkLogger.error( LOG_MODULO_METADATA, e, e.getLocalizedMessage() );
         }
     }
 
@@ -97,7 +101,6 @@ public class WebFrameworkWebApplication{
 
         // recuperar todos os métodos da classe
         for( Method method : Class.forName( className ).getDeclaredMethods() ){
-            // WebFrameworkLogger.log( " - ", method.getName() );
             for( Annotation annotation : method.getAnnotations() ){
                 if( annotation.annotationType().getName().equals( "br.com.gom.webframework.annotations.WebFrameworkGetMethod" ) ){
                     httpMethod = "GET";
@@ -106,7 +109,6 @@ public class WebFrameworkWebApplication{
                     httpMethod = "POST";
                     path = ( (WebFrameworkPostMethod)annotation ).value();
                 }
-                //WebFrameworkLogger.log( " - ", ( httpMethod + " " + path ) );
                 RequestControllerData getData = new RequestControllerData( httpMethod, path, className, method.getName() );
                 ControllerMap.values.put( ( httpMethod + path ), getData );
             }
