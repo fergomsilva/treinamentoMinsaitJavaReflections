@@ -108,15 +108,18 @@ public class WebFrameworkDispatcherServlet extends HttpServlet{
     }
 
     @SuppressWarnings( { "all" } )
-    private void injectDependencies(final Object controller) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, ClassNotFoundException{
+    private void injectDependencies(final Object mainObj) throws InstantiationException, IllegalAccessException, 
+    IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, ClassNotFoundException{
         // ver apenas os campos anotados por Inject
-        for( Field attr : controller.getClass().getDeclaredFields() ){
-            String attrTipo = attr.getType().getName();
-            WebFrameworkLogger.log( MODULO_LOG, "Injetar '%s' do tipo '%s'", attr.getName(), attrTipo );
-            Object serviceImpl;
+        String attrTipo = null;
+        String implType = null;
+        Object serviceImpl = null;
+        for( Field attr : mainObj.getClass().getDeclaredFields() ){
+            attrTipo = attr.getType().getName();
             if( DependencyInjectionInstance.getByKey( attrTipo ) == null ){
+                WebFrameworkLogger.log( MODULO_LOG, "Injetar '%s' do tipo '%s'", attr.getName(), attrTipo );
                 // tem declaracao da interface?
-                String implType = ServiceImplementationMap.getByKey( attrTipo );
+                implType = ServiceImplementationMap.getByKey( attrTipo );
                 WebFrameworkLogger.log( MODULO_LOG, "Procurar instancias de '%s'", implType );
                 if( implType != null ){
                     WebFrameworkLogger.log( MODULO_LOG, "Injetar novo objeto" );
@@ -127,8 +130,11 @@ public class WebFrameworkDispatcherServlet extends HttpServlet{
                     }
                     // atribuir essa instancia ao atributo anotado - INJECAO DE DEPENDENCIA
                     attr.setAccessible( true );
-                    attr.set( controller, serviceImpl );
+                    attr.set( mainObj, serviceImpl );
                     WebFrameworkLogger.log( MODULO_LOG, "Objeto injetado com sucesso!" );
+                    WebFrameworkLogger.log( MODULO_LOG, "Verificar injecoes da implementacao %s.", 
+                        serviceImpl.getClass().getName() );
+                    this.injectDependencies( serviceImpl );
                 }
             }
         }

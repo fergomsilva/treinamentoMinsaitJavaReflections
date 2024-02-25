@@ -63,6 +63,11 @@ public class HelloController{
         return this.iservice.chamadaCustom( "Hello injected" );
     }
 
+    @WebFrameworkGetMethod( "/injected/subnivel" )
+    public String chamadaCustomNivel2(){
+        return this.iservice.chamadaCustomSubnivel( "Hello injected subnivel" );
+    }
+
     @WebFrameworkPutMethod( "/produto/{idProduto}/nome/{nomeProduto}" )
     public Produto atualizarNomeProduto(final Long idProduto, final String nomeProduto){
         return Produto.builder()
@@ -88,6 +93,4 @@ public class HelloController{
         //DELeTE
         //GET
     //RequestParameter
-
-    //Injecao de dependencias em cadeia
 }
