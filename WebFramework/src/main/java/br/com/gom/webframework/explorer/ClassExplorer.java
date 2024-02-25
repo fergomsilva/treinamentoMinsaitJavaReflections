@@ -23,7 +23,7 @@ public class ClassExplorer{
             // dado a pasta onde tenho os pacotes do projeto com getResourceAsStream, 
             // defino raiz como package
             final InputStream stream = ClassLoader.getSystemClassLoader()
-                .getResourceAsStream( packageName.replaceAll( "\\.", "/" ) );
+                .getResourceAsStream( packageName.replace( "\\.", "/" ) );
             final BufferedReader reader = new BufferedReader( new java.io.InputStreamReader( stream ) );
             String line;
             while( ( line = reader.readLine() ) != null ){

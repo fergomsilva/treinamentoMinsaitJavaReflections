@@ -82,12 +82,12 @@ public class WebFrameworkWebApplication{
                         WebFrameworkLogger.log( LOG_MODULO_METADATA, "Found a service Implementation %s", classe );
                         for( Class<?> interfaceWeb : Class.forName( classe ).getInterfaces() ){
                             WebFrameworkLogger.log( LOG_MODULO_METADATA, "Class implements %s", interfaceWeb.getName() );
-                            ServiceImplementationMap.implementations.put( interfaceWeb.getName(), classe );
+                            ServiceImplementationMap.put( interfaceWeb.getName(), classe );
                         }
                     }
                 }
             }
-            for( RequestControllerData item : ControllerMap.values.values() ){
+            for( RequestControllerData item : ControllerMap.listValues() ){
                 WebFrameworkLogger.log( "", item.toString() );
             }
         }catch( Exception e ){
@@ -110,7 +110,7 @@ public class WebFrameworkWebApplication{
                     path = ( (WebFrameworkPostMethod)annotation ).value();
                 }
                 RequestControllerData getData = new RequestControllerData( httpMethod, path, className, method.getName() );
-                ControllerMap.values.put( ( httpMethod + path ), getData );
+                ControllerMap.put( ( httpMethod + path ), getData );
             }
         }
 

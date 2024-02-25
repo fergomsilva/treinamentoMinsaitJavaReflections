@@ -12,7 +12,7 @@ import com.google.gson.Gson;
 
 import br.com.gom.webframework.datastructures.ControllerInstance;
 import br.com.gom.webframework.datastructures.ControllerMap;
-import br.com.gom.webframework.datastructures.DependencyInjectionMap;
+import br.com.gom.webframework.datastructures.DependencyInjectionInstance;
 import br.com.gom.webframework.datastructures.RequestControllerData;
 import br.com.gom.webframework.datastructures.ServiceImplementationMap;
 import br.com.gom.webframework.util.WebFrameworkLogger;
@@ -39,7 +39,7 @@ public class WebFrameworkDispatcherServlet extends HttpServlet{
         String key = ( httpMethod.toUpperCase() + url );
 
         // busca a informacao da classe; metodo; parametros... da requisicao
-        final RequestControllerData data = ControllerMap.values.get( key );
+        final RequestControllerData data = ControllerMap.getByKey( key );
 
         WebFrameworkLogger.log( MODULO_LOG, "URL: %s (%s) - Handler: %s.%s", 
             url, httpMethod, data.getControllerClass(), data.getControllerMethod() );
@@ -49,11 +49,11 @@ public class WebFrameworkDispatcherServlet extends HttpServlet{
         WebFrameworkLogger.log( MODULO_LOG, "Procurar instancia da controladora" );
         try{
             try( final PrintWriter out = new PrintWriter( resp.getWriter() ); ){
-                controller = ControllerInstance.instances.get( data.getControllerClass() );
+                controller = ControllerInstance.getByKey( data.getControllerClass() );
                 if( controller == null ){
                     WebFrameworkLogger.log( MODULO_LOG, "Criar nova instancia da controladora" );
                     controller = Class.forName( data.getControllerClass() ).getConstructor().newInstance();
-                    ControllerInstance.instances.put( data.getControllerClass(), controller );
+                    ControllerInstance.put( data.getControllerClass(), controller );
                     this.injectDependencies( controller );
                 }
 
@@ -102,16 +102,16 @@ public class WebFrameworkDispatcherServlet extends HttpServlet{
             String attrTipo = attr.getType().getName();
             WebFrameworkLogger.log( MODULO_LOG, "Injetar '%s' do tipo '%s'", attr.getName(), attrTipo );
             Object serviceImpl;
-            if( DependencyInjectionMap.objects.get( attrTipo ) == null ){
+            if( DependencyInjectionInstance.getByKey( attrTipo ) == null ){
                 // tem declaracao da interface?
-                String implType = ServiceImplementationMap.implementations.get( attrTipo );
+                String implType = ServiceImplementationMap.getByKey( attrTipo );
                 WebFrameworkLogger.log( MODULO_LOG, "Procurar instancias de '%s'", implType );
                 if( implType != null ){
                     WebFrameworkLogger.log( MODULO_LOG, "Injetar novo objeto" );
-                    serviceImpl = DependencyInjectionMap.objects.get( implType );
+                    serviceImpl = DependencyInjectionInstance.getByKey( implType );
                     if( serviceImpl == null ){
                         serviceImpl = Class.forName( implType ).getDeclaredConstructor().newInstance();
-                        DependencyInjectionMap.objects.put( implType, serviceImpl );
+                        DependencyInjectionInstance.put( implType, serviceImpl );
                     }
                     // atribuir essa instancia ao atributo anotado - INJECAO DE DEPENDENCIA
                     attr.setAccessible( true );
