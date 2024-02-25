@@ -1,3 +1,13 @@
+#diretories
+/WebFramework/target
+/WebFramework/.vscode
+/WebFramework/tomcat.8080
+/WebFramework/tomcat.*
+/MyWebTestFramework/target
+/MyWebTestFramework/.vscode
+/MyWebTestFramework/tomcat.8080
+/MyWebTestFramework/tomcat.*
+
 # Compiled class file
 *.class
 

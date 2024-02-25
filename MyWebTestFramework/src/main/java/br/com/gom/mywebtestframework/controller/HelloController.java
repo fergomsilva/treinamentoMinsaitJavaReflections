@@ -4,9 +4,11 @@ import br.com.gom.mywebtestframework.model.Produto;
 import br.com.gom.mywebtestframework.service.IService;
 import br.com.gom.webframework.annotations.WebFrameworkBody;
 import br.com.gom.webframework.annotations.WebFrameworkController;
+import br.com.gom.webframework.annotations.WebFrameworkDeleteMethod;
 import br.com.gom.webframework.annotations.WebFrameworkGetMethod;
 import br.com.gom.webframework.annotations.WebFrameworkInject;
 import br.com.gom.webframework.annotations.WebFrameworkPostMethod;
+import br.com.gom.webframework.annotations.WebFrameworkPutMethod;
 
 
 @WebFrameworkController
@@ -30,6 +32,16 @@ public class HelloController{
         .build();
     }
 
+    @WebFrameworkGetMethod( "/produto/{idProduto}" )
+    public Produto exibirProduto(final Long idProduto){
+        return Produto.builder()
+            .id( idProduto )
+            .nome( "Nome" + idProduto )
+            .valor( 2000.0 )
+            .linkFoto( "teste.jpg" )
+        .build();
+    }
+
     @WebFrameworkPostMethod( "/produto" )
     public Produto cadastrarProduto(final @WebFrameworkBody Produto novo){
         System.out.println( novo );
@@ -47,8 +59,28 @@ public class HelloController{
     }
 
     @WebFrameworkGetMethod( "/injected" )
-    public String chamadaCusto(){
+    public String chamadaCustom(){
         return this.iservice.chamadaCustom( "Hello injected" );
+    }
+
+    @WebFrameworkPutMethod( "/produto/{idProduto}/nome/{nomeProduto}" )
+    public Produto atualizarNomeProduto(final Long idProduto, final String nomeProduto){
+        return Produto.builder()
+            .id( idProduto )
+            .nome( nomeProduto )
+            .valor( 2000.0 )
+            .linkFoto( "teste.jpg" )
+        .build();
+    }
+
+    @WebFrameworkDeleteMethod( "/produto/{idProduto}" )
+    public Produto deleteProduto(final Long idProduto){
+        return Produto.builder()
+            .id( idProduto )
+            .nome( "Nome" + idProduto )
+            .valor( 2000.0 )
+            .linkFoto( "teste.jpg" )
+        .build();
     }
 
     //PathParameter

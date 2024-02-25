@@ -5,16 +5,18 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 
 import com.google.gson.Gson;
 
-import br.com.gom.webframework.datastructures.ControllerInstance;
-import br.com.gom.webframework.datastructures.ControllerMap;
-import br.com.gom.webframework.datastructures.DependencyInjectionInstance;
-import br.com.gom.webframework.datastructures.RequestControllerData;
-import br.com.gom.webframework.datastructures.ServiceImplementationMap;
+import br.com.gom.webframework.annotations.WebFrameworkBody;
+import br.com.gom.webframework.datastructures.controllers.ControllerInstance;
+import br.com.gom.webframework.datastructures.controllers.ControllerMap;
+import br.com.gom.webframework.datastructures.controllers.RequestControllerData;
+import br.com.gom.webframework.datastructures.injections.DependencyInjectionInstance;
+import br.com.gom.webframework.datastructures.injections.ServiceImplementationMap;
 import br.com.gom.webframework.util.WebFrameworkLogger;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
@@ -36,10 +38,14 @@ public class WebFrameworkDispatcherServlet extends HttpServlet{
         final String url = req.getRequestURI();
         final String httpMethod = req.getMethod().toUpperCase();
 
-        String key = ( httpMethod.toUpperCase() + url );
-
         // busca a informacao da classe; metodo; parametros... da requisicao
-        final RequestControllerData data = ControllerMap.getByKey( key );
+        final RequestControllerData data = ControllerMap.getByKey( ( httpMethod.toUpperCase() + url ) );
+        if( data == null ){
+            WebFrameworkLogger.log( MODULO_LOG, "Nao encontrada informacoes de request: %s (%s)", 
+                url, httpMethod );
+            resp.setStatus( HttpServletResponse.SC_NOT_FOUND );
+            return;
+        }
 
         WebFrameworkLogger.log( MODULO_LOG, "URL: %s (%s) - Handler: %s.%s", 
             url, httpMethod, data.getControllerClass(), data.getControllerMethod() );
@@ -66,37 +72,43 @@ public class WebFrameworkDispatcherServlet extends HttpServlet{
                         break;
                     }
                 }
-
-                final Gson gson = new Gson();
-                // metodo tem parametros???
-                if( controllerMethod.getParameterCount() > 0 ){
-                    WebFrameworkLogger.log( MODULO_LOG, "Metodo '%s' tem '%d' parametro(s)!", controllerMethod.getName(), 
-                    controllerMethod.getParameterCount() );
-                    Object arg;
-                    final Parameter parameter = controllerMethod.getParameters()[ 0 ];
-                    if( "br.com.gom.webframework.annotations.WebFrameworkBody".equals( parameter.getAnnotations()[ 0 ].annotationType().getName() ) ){
-                        WebFrameworkLogger.log( MODULO_LOG, "\tProcurando parmetro da requisicao do tipo '%s' ", parameter.getType().getName() );
-                        final String body = this.readBytesFromRequest( req );
-                        WebFrameworkLogger.log( MODULO_LOG, "\tconteudo do parametro '%s' ", body );
-                        arg = gson.fromJson( body, parameter.getType() );
-                        WebFrameworkLogger.log( MODULO_LOG, "Invocar o metodo '%s', com parametro do tipo '%s' para requisicao.", 
-                            controllerMethod.getName(), parameter.getType().toString() );
-                        out.println( gson.toJson( controllerMethod.invoke( controller, arg ) ) );
+                if( controllerMethod != null ){
+                    final Gson gson = new Gson();
+                    // metodo tem parametros???
+                    if( controllerMethod.getParameterCount() > 0 ){
+                        WebFrameworkLogger.log( MODULO_LOG, "Metodo '%s' tem '%d' parametro(s)!", controllerMethod.getName(), 
+                            controllerMethod.getParameterCount() );
+                        Object arg;
+                        final Parameter parameter = controllerMethod.getParameters()[ 0 ];
+                        if( parameter.getAnnotations()[ 0 ].annotationType().isAssignableFrom( WebFrameworkBody.class ) ){
+                            WebFrameworkLogger.log( MODULO_LOG, "\tProcurando parmetro da requisicao do tipo '%s' ", parameter.getType().getName() );
+                            final String body = this.readBytesFromRequest( req );
+                            WebFrameworkLogger.log( MODULO_LOG, "\tconteudo do parametro '%s' ", body );
+                                arg = gson.fromJson( body, parameter.getType() );
+                            WebFrameworkLogger.log( MODULO_LOG, "Invocar o metodo '%s', com parametro do tipo '%s' para requisicao.", 
+                                controllerMethod.getName(), parameter.getType().toString() );
+                            out.println( gson.toJson( controllerMethod.invoke( controller, arg ) ) );
+                            out.flush();
+                        }
+                    }else{
+                        WebFrameworkLogger.log( MODULO_LOG, "Invocar o metodo '%s' para requisicao.", 
+                            controllerMethod.getName() );
+                        out.println( gson.toJson( controllerMethod.invoke( controller ) ) );
+                        out.flush();
                     }
                 }else{
-                    WebFrameworkLogger.log( MODULO_LOG, "Invocar o metodo '%s' para requisicao.", 
-                        controllerMethod.getName() );
-                    out.println( gson.toJson( controllerMethod.invoke( controller ) ) );
+                    WebFrameworkLogger.log( MODULO_LOG, "Metodo '%s.%s' nao encontrado ou nao acessivel!", 
+                        data.getControllerClass(), data.getControllerMethod() );
+                    resp.setStatus( HttpServletResponse.SC_INTERNAL_SERVER_ERROR );
                 }
-                out.flush();
             }
         }catch( Exception e ){
             WebFrameworkLogger.error( MODULO_LOG, e, e.getMessage() );
         }
-        
     }
 
-    private void injectDependencies(final Object controller) throws Exception{
+    @SuppressWarnings( { "all" } )
+    private void injectDependencies(final Object controller) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, ClassNotFoundException{
         // ver apenas os campos anotados por Inject
         for( Field attr : controller.getClass().getDeclaredFields() ){
             String attrTipo = attr.getType().getName();

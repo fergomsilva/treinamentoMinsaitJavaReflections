@@ -1,5 +1,6 @@
-package br.com.gom.webframework.datastructures;
+package br.com.gom.webframework.datastructures.controllers;
 
+import br.com.gom.webframework.enumerations.HTTP_METHOD_ENUM;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -8,11 +9,11 @@ import lombok.NoArgsConstructor;
 
 @Data
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 public class RequestControllerData{
     
-    private String httpMethod;
+    private HTTP_METHOD_ENUM httpMethod;
     private String url;
     private String controllerClass;
     private String controllerMethod;

@@ -19,12 +19,11 @@ public class ClassExplorer{
 
     private static List<String> packagExplorer(final String packageName){
         final List<String> classNames = new ArrayList<>();
-        try{
-            // dado a pasta onde tenho os pacotes do projeto com getResourceAsStream, 
-            // defino raiz como package
-            final InputStream stream = ClassLoader.getSystemClassLoader()
-                .getResourceAsStream( packageName.replace( "\\.", "/" ) );
-            final BufferedReader reader = new BufferedReader( new java.io.InputStreamReader( stream ) );
+        // dado a pasta onde tenho os pacotes do projeto com getResourceAsStream, 
+        // defino raiz como package
+        try( final InputStream stream = ClassLoader.getSystemClassLoader().getResourceAsStream( 
+                packageName.replace( ".", "/" ) );
+             final BufferedReader reader = new BufferedReader( new java.io.InputStreamReader( stream ) ); ){
             String line;
             while( ( line = reader.readLine() ) != null ){
                 if( line.endsWith( ".class" ) ){

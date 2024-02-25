@@ -1,4 +1,4 @@
-package br.com.gom.webframework.datastructures;
+package br.com.gom.webframework.datastructures.controllers;
 
 import java.util.HashMap;
 import java.util.Map;

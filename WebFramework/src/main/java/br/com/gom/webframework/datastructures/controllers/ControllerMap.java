@@ -1,4 +1,4 @@
-package br.com.gom.webframework.datastructures;
+package br.com.gom.webframework.datastructures.controllers;
 
 import java.util.HashMap;
 import java.util.List;
@@ -23,8 +23,8 @@ public class ControllerMap{
         return MAPA.get( httpMethodUrl );
     }
 
-    public static void put(final String httpMethodUrl, final RequestControllerData data){
-        MAPA.put( httpMethodUrl, data );
+    public static void put(final RequestControllerData data){
+        MAPA.put( ( data.getHttpMethod() + data.getUrl() ), data );
     }
 
     public static List<RequestControllerData> listValues(){
