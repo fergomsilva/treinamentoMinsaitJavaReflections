@@ -6,6 +6,10 @@ import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Parameter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
@@ -16,14 +20,19 @@ import org.apache.catalina.connector.Connector;
 import org.apache.catalina.startup.Tomcat;
 
 import br.com.gom.webframework.annotations.WebFrameworkController;
-import br.com.gom.webframework.annotations.WebFrameworkDeleteMethod;
-import br.com.gom.webframework.annotations.WebFrameworkGetMethod;
-import br.com.gom.webframework.annotations.WebFrameworkPostMethod;
-import br.com.gom.webframework.annotations.WebFrameworkPutMethod;
 import br.com.gom.webframework.annotations.WebFrameworkService;
+import br.com.gom.webframework.annotations.datarequests.WebFrameworkBody;
+import br.com.gom.webframework.annotations.datarequests.WebFrameworkPathParameter;
+import br.com.gom.webframework.annotations.datarequests.WebFrameworkRequestParameter;
+import br.com.gom.webframework.annotations.httpmethods.WebFrameworkDeleteMethod;
+import br.com.gom.webframework.annotations.httpmethods.WebFrameworkGetMethod;
+import br.com.gom.webframework.annotations.httpmethods.WebFrameworkPostMethod;
+import br.com.gom.webframework.annotations.httpmethods.WebFrameworkPutMethod;
 import br.com.gom.webframework.datastructures.configs.WebFrameworkConfigMap;
 import br.com.gom.webframework.datastructures.controllers.ControllerMap;
+import br.com.gom.webframework.datastructures.controllers.ParameterMethodControllerData;
 import br.com.gom.webframework.datastructures.controllers.RequestControllerData;
+import br.com.gom.webframework.datastructures.controllers.SplitUrlControllerData;
 import br.com.gom.webframework.datastructures.injections.ServiceImplementationMap;
 import br.com.gom.webframework.enumerations.HTTP_METHOD_ENUM;
 import br.com.gom.webframework.explorer.ClassExplorer;
@@ -145,37 +154,90 @@ public class WebFrameworkWebApplication{
                 count.get() );
     }
 
-    private static void  extractMethods(final String className) throws SecurityException, ClassNotFoundException{
+    private static void extractMethods(final String className) throws SecurityException, ClassNotFoundException{
         // recuperar todos os métodos da classe
         for( Method method : Class.forName( className ).getDeclaredMethods() ){
             if( Modifier.PUBLIC == method.getModifiers() ){
                 for( Annotation annotation : method.getAnnotations() ){
-                    ControllerMap.put( RequestControllerData.builder()
+                    final RequestControllerData data = RequestControllerData.builder()
                         .httpMethod( HTTP_METHOD_ENUM.valueOfByAnnotation( annotation ) )
                         .url( getValueFromAnnotation( annotation ) )
                         .controllerClass( className )
                         .controllerMethod( method.getName() )
-                        .build()
-                    );
+                    .build();
+                    data.setMethodParameters( extractParametersFromMethod( method ) );
+                    data.setUrlSplits( extractUrlSplits( data.getUrl(), data.getMethodParameters() ) );
+                    ControllerMap.put( data );
                 }
             }
         }
     }
 
+    private static List<SplitUrlControllerData> extractUrlSplits(final String url, 
+    final List<ParameterMethodControllerData> parametersMethod){
+        final List<SplitUrlControllerData> splitsData = new ArrayList<>();
+        if( url.lastIndexOf( '/' ) > 0 ){ // tem mais de uma barra
+            Arrays.stream( url.substring( 1 ).split( "/" ) )
+                .forEach( path -> {
+                    final SplitUrlControllerData data = SplitUrlControllerData.builder()
+                        .path( path.replaceAll( "[{}]", "" ) )
+                        .parameter( path.charAt( 0 ) == '{' )
+                    .build();
+                    if( data.isParameter() ){
+                        final int indexParam = parametersMethod.indexOf( ParameterMethodControllerData.builder().paramName( data.getPath() ).build() );
+                        if( indexParam > -1 ){
+                            data.setTypeToMethod( parametersMethod.get( indexParam ).getParamClass() );
+                            data.setIndexParameterMethod( indexParam );
+                        }
+                    }
+                    splitsData.add( data );
+                } );
+        }
+        return splitsData;
+    }
+
+    private static List<ParameterMethodControllerData> extractParametersFromMethod(final Method method){
+        final List<ParameterMethodControllerData> parametersData = new ArrayList<>();
+        Optional<Annotation> annotation;
+        ParameterMethodControllerData paramData;
+        for( Parameter parameter : method.getParameters() ){
+            annotation = Arrays.stream( parameter.getAnnotations() )
+                .filter( item -> item.annotationType().isAssignableFrom( WebFrameworkBody.class )
+                    || item.annotationType().isAssignableFrom( WebFrameworkPathParameter.class )
+                    || item.annotationType().isAssignableFrom( WebFrameworkRequestParameter.class )
+                ).findFirst();
+            if( annotation.isPresent() ){
+                paramData = ParameterMethodControllerData.builder()
+                    .paramClass( parameter.getType() )
+                    .paramAnnotation( annotation.get() )
+                    .build();
+                if( annotation.get().annotationType().isAssignableFrom( WebFrameworkPathParameter.class ) )
+                    paramData.setParamName( ( (WebFrameworkPathParameter)annotation.get() ).value() );
+                else if( annotation.get().annotationType().isAssignableFrom( WebFrameworkRequestParameter.class ) )
+                    paramData.setParamName( ( (WebFrameworkRequestParameter)annotation.get() ).value() );
+                parametersData.add( paramData  );
+            }
+        }
+        return Collections.unmodifiableList( parametersData );
+    }
+
     private static String getValueFromAnnotation(final Annotation annotation){
+        String url = null;
         final Optional<HTTP_METHOD_ENUM> httpMethod = Optional.ofNullable( 
             HTTP_METHOD_ENUM.valueOfByAnnotation( annotation ) );
         if( httpMethod.isPresent() ){
             if( httpMethod.get().isGet() )
-                return ( (WebFrameworkGetMethod)annotation ).value();
+                url = ( (WebFrameworkGetMethod)annotation ).value();
             else if( httpMethod.get().isPost() )
-                return ( (WebFrameworkPostMethod)annotation ).value();
+                url = ( (WebFrameworkPostMethod)annotation ).value();
             else if( httpMethod.get().isPut() )
-                return ( (WebFrameworkPutMethod)annotation ).value();
+                url = ( (WebFrameworkPutMethod)annotation ).value();
             else if( httpMethod.get().isDelete() )
-                return ( (WebFrameworkDeleteMethod)annotation ).value();
+                url = ( (WebFrameworkDeleteMethod)annotation ).value();
+            if( url != null && !url.startsWith( "/" ) )
+                url = "/" + url;
         }
-        return null;
+        return url;
     }
 
 }

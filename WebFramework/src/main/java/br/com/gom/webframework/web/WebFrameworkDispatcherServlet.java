@@ -11,7 +11,7 @@ import java.lang.reflect.Parameter;
 
 import com.google.gson.Gson;
 
-import br.com.gom.webframework.annotations.WebFrameworkBody;
+import br.com.gom.webframework.annotations.datarequests.WebFrameworkBody;
 import br.com.gom.webframework.datastructures.controllers.ControllerInstance;
 import br.com.gom.webframework.datastructures.controllers.ControllerMap;
 import br.com.gom.webframework.datastructures.controllers.RequestControllerData;
@@ -36,6 +36,10 @@ public class WebFrameworkDispatcherServlet extends HttpServlet{
             return;
 
         final String url = req.getRequestURI();
+        // quando tem ?
+        // RequestParameter  ?id=abc
+        // System.out.println( "03: " + req.getParameterMap() );
+        // System.out.println( "04: " + req.getQueryString() );
         final String httpMethod = req.getMethod().toUpperCase();
 
         // busca a informacao da classe; metodo; parametros... da requisicao

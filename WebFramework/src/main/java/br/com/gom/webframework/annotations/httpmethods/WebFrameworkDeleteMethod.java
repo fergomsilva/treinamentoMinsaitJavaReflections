@@ -1,4 +1,4 @@
-package br.com.gom.webframework.annotations;
+package br.com.gom.webframework.annotations.httpmethods;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -7,7 +7,9 @@ import java.lang.annotation.Target;
 
 
 @Retention( RetentionPolicy.RUNTIME )
-@Target( ElementType.PARAMETER )
-public @interface WebFrameworkBody{
+@Target( ElementType.METHOD )
+public @interface WebFrameworkDeleteMethod{
     
+    public String value();
+
 }

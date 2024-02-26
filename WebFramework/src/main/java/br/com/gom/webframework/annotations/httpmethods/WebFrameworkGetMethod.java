@@ -1,4 +1,4 @@
-package br.com.gom.webframework.annotations;
+package br.com.gom.webframework.annotations.httpmethods;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

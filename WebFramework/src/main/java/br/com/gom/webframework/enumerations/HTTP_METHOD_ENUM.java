@@ -3,10 +3,10 @@ package br.com.gom.webframework.enumerations;
 import java.lang.annotation.Annotation;
 import java.util.Arrays;
 
-import br.com.gom.webframework.annotations.WebFrameworkDeleteMethod;
-import br.com.gom.webframework.annotations.WebFrameworkGetMethod;
-import br.com.gom.webframework.annotations.WebFrameworkPostMethod;
-import br.com.gom.webframework.annotations.WebFrameworkPutMethod;
+import br.com.gom.webframework.annotations.httpmethods.WebFrameworkDeleteMethod;
+import br.com.gom.webframework.annotations.httpmethods.WebFrameworkGetMethod;
+import br.com.gom.webframework.annotations.httpmethods.WebFrameworkPostMethod;
+import br.com.gom.webframework.annotations.httpmethods.WebFrameworkPutMethod;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
