@@ -22,6 +22,11 @@ public class HelloController{
     @WebFrameworkInject
     private IService iservice;
     
+    @WebFrameworkGetMethod( "/" )
+    public String testeRaiz(){
+        return "TESTE RAIZ";
+    }
+
     @WebFrameworkGetMethod( "/hello" )
     public String returnHelloWorld(){
         return "RETURN Hello wordl !";

@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Map.Entry;
 
 
 public class ControllerMap{
@@ -15,16 +16,28 @@ public class ControllerMap{
         super();
     }
 
-    public static boolean hasKey(final String httpMethodUrl){
-        return Optional.ofNullable( getByKey( httpMethodUrl ) ).isPresent();
-    }
-
-    public static RequestControllerData getByKey(final String httpMethodUrl){
-        return MAPA.get( httpMethodUrl );
+    public static RequestControllerData find(final String httpMethod, final String url){
+        RequestControllerData data = MAPA.get( httpMethod + url );
+        if( data == null ){
+            data = MAPA.entrySet().stream()
+                .filter( item -> !item.getValue().isStaticUrl() 
+                    && httpMethod.equals( item.getValue().getHttpMethod().name() ) )
+                .map( Entry::getValue )
+                .filter( reqData -> {
+                    return ( url + " " ).matches( reqData.getUrlRegex() );
+                } )
+                .findFirst()
+                .orElseGet( ()->null )
+            ;
+        }
+        return data;
     }
 
     public static void put(final RequestControllerData data){
-        MAPA.put( ( data.getHttpMethod() + data.getUrl() ), data );
+        if( data.isStaticUrl() )
+            MAPA.put( ( data.getHttpMethod() + data.getUrl() ), data );
+        else
+            MAPA.put( ( data.getHttpMethod() + data.getUrlRegex() ), data );
     }
 
     public static List<RequestControllerData> listValues(){

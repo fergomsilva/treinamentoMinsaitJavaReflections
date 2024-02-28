@@ -7,6 +7,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -167,6 +168,9 @@ public class WebFrameworkWebApplication{
                     .build();
                     data.setMethodParameters( extractParametersFromMethod( method ) );
                     data.setUrlSplits( extractUrlSplits( data.getUrl(), data.getMethodParameters() ) );
+                    data.setStaticUrl( data.getUrlSplits().stream().noneMatch( item -> item.isParameter() ) );
+                    if( !data.isStaticUrl() )
+                        data.setUrlRegex( generateUrlRegex( data.getUrlSplits() ) );
                     ControllerMap.put( data );
                 }
             }
@@ -175,25 +179,45 @@ public class WebFrameworkWebApplication{
 
     private static List<SplitUrlControllerData> extractUrlSplits(final String url, 
     final List<ParameterMethodControllerData> parametersMethod){
+        if( url.length() == 1 )
+            return Arrays.asList( SplitUrlControllerData.builder().path( "" ).build() );
         final List<SplitUrlControllerData> splitsData = new ArrayList<>();
-        if( url.lastIndexOf( '/' ) > 0 ){ // tem mais de uma barra
-            Arrays.stream( url.substring( 1 ).split( "/" ) )
-                .forEach( path -> {
-                    final SplitUrlControllerData data = SplitUrlControllerData.builder()
-                        .path( path.replaceAll( "[{}]", "" ) )
-                        .parameter( path.charAt( 0 ) == '{' )
-                    .build();
-                    if( data.isParameter() ){
-                        final int indexParam = parametersMethod.indexOf( ParameterMethodControllerData.builder().paramName( data.getPath() ).build() );
-                        if( indexParam > -1 ){
-                            data.setTypeToMethod( parametersMethod.get( indexParam ).getParamClass() );
-                            data.setIndexParameterMethod( indexParam );
-                        }
+        Arrays.stream( url.substring( 1 ).split( "/" ) )
+            .forEach( path -> {
+                final SplitUrlControllerData data = SplitUrlControllerData.builder()
+                    .path( path.replaceAll( "[{}]", "" ) )
+                .build();
+                if( path.matches( "^[{]\\S*[}]$" ) ){
+                    final int indexParam = parametersMethod.indexOf( ParameterMethodControllerData.builder().paramName( data.getPath() ).build() );
+                    if( indexParam > -1 ){
+                        data.setTypeToMethod( parametersMethod.get( indexParam ).getParamClass() );
+                        data.setIndexParameterMethod( indexParam );
                     }
-                    splitsData.add( data );
-                } );
-        }
+                }
+                splitsData.add( data );
+            } );
         return splitsData;
+    }
+
+    private static String generateUrlRegex(final List<SplitUrlControllerData> urlSplits){
+        final String regex = String.join( "/", urlSplits.stream().map( item -> {
+            if( !item.isParameter() )
+                return item.getPath();
+            else{
+                if( Number.class.isAssignableFrom( item.getTypeToMethod().getSuperclass() ) ){
+                    if( Double.class.isAssignableFrom( item.getTypeToMethod() ) 
+                        || Float.class.isAssignableFrom( item.getTypeToMethod() ) 
+                        || BigDecimal.class.isAssignableFrom( item.getTypeToMethod() ) )
+                        return "[-0-9,.]*";
+                    return "\\d*";
+                }else if( String.class.isAssignableFrom( item.getTypeToMethod() ) 
+                    || StringBuffer.class.isAssignableFrom( item.getTypeToMethod() ) 
+                    || StringBuilder.class.isAssignableFrom( item.getTypeToMethod() ) )
+                    return "\\w*";
+                return "\\S*";
+            }
+        } ).toList() );
+        return "^/" + regex + " $";
     }
 
     private static List<ParameterMethodControllerData> extractParametersFromMethod(final Method method){

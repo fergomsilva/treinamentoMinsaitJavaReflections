@@ -14,6 +14,7 @@ import com.google.gson.Gson;
 import br.com.gom.webframework.annotations.datarequests.WebFrameworkBody;
 import br.com.gom.webframework.datastructures.controllers.ControllerInstance;
 import br.com.gom.webframework.datastructures.controllers.ControllerMap;
+import br.com.gom.webframework.datastructures.controllers.ParameterMethodControllerData;
 import br.com.gom.webframework.datastructures.controllers.RequestControllerData;
 import br.com.gom.webframework.datastructures.injections.DependencyInjectionInstance;
 import br.com.gom.webframework.datastructures.injections.ServiceImplementationMap;
@@ -43,7 +44,7 @@ public class WebFrameworkDispatcherServlet extends HttpServlet{
         final String httpMethod = req.getMethod().toUpperCase();
 
         // busca a informacao da classe; metodo; parametros... da requisicao
-        final RequestControllerData data = ControllerMap.getByKey( ( httpMethod.toUpperCase() + url ) );
+        final RequestControllerData data = ControllerMap.find( httpMethod.toUpperCase(), url );
         if( data == null ){
             WebFrameworkLogger.log( MODULO_LOG, "Nao encontrada informacoes de request: %s (%s)", 
                 url, httpMethod );
@@ -70,18 +71,28 @@ public class WebFrameworkDispatcherServlet extends HttpServlet{
                 // extrair o metodo desta classe, ou seja o metodo que vai atender a requisicao.
                 // executar o metodo e escrever a saida dele
                 Method controllerMethod = null;
-                for( Method method : controller.getClass().getMethods() ){
-                    if( data.getControllerMethod().equals( method.getName() ) ){
-                        controllerMethod = method;
-                        break;
-                    }
-                }
+                if( data.getMethodParameters() == null || data.getMethodParameters().isEmpty() )
+                    controllerMethod = controller.getClass().getMethod( data.getControllerMethod() );
+                else
+                    controllerMethod = controller.getClass().getMethod( data.getControllerMethod(), 
+                        data.getMethodParameters().stream()
+                            .map( item -> item.getParamClass() )
+                            .toList().toArray( new Class<?>[0] )
+                    );
+                
                 if( controllerMethod != null ){
                     final Gson gson = new Gson();
-                    // metodo tem parametros???
-                    if( controllerMethod.getParameterCount() > 0 ){
+                    if( data.getMethodParameters() != null && !data.getMethodParameters().isEmpty() ){ // metodo tem parametros???
                         WebFrameworkLogger.log( MODULO_LOG, "Metodo '%s' tem '%d' parametro(s)!", controllerMethod.getName(), 
                             controllerMethod.getParameterCount() );
+                        
+                        if( !data.isStaticUrl() ){
+                            final String[] urlSplits = url.substring( 1 ).split( "/" );
+                            data.getUrlSplits().get(0).isParameter();
+                            data.getMethodParameters().get(0).getParamAnnotation();
+                        }
+
+
                         Object arg;
                         final Parameter parameter = controllerMethod.getParameters()[ 0 ];
                         if( parameter.getAnnotations()[ 0 ].annotationType().isAssignableFrom( WebFrameworkBody.class ) ){
