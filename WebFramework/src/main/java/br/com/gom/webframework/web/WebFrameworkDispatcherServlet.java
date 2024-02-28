@@ -8,13 +8,18 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.gson.Gson;
 
 import br.com.gom.webframework.annotations.datarequests.WebFrameworkBody;
+import br.com.gom.webframework.annotations.datarequests.WebFrameworkPathParameter;
+import br.com.gom.webframework.annotations.datarequests.WebFrameworkRequestParameter;
 import br.com.gom.webframework.datastructures.controllers.ControllerInstance;
 import br.com.gom.webframework.datastructures.controllers.ControllerMap;
-import br.com.gom.webframework.datastructures.controllers.ParameterMethodControllerData;
 import br.com.gom.webframework.datastructures.controllers.RequestControllerData;
 import br.com.gom.webframework.datastructures.injections.DependencyInjectionInstance;
 import br.com.gom.webframework.datastructures.injections.ServiceImplementationMap;
@@ -35,12 +40,7 @@ public class WebFrameworkDispatcherServlet extends HttpServlet{
         // ignorar o favIcon
         if( req.getRequestURL().toString().endsWith( "favicon.ico" ) )
             return;
-
         final String url = req.getRequestURI();
-        // quando tem ?
-        // RequestParameter  ?id=abc
-        // System.out.println( "03: " + req.getParameterMap() );
-        // System.out.println( "04: " + req.getQueryString() );
         final String httpMethod = req.getMethod().toUpperCase();
 
         // busca a informacao da classe; metodo; parametros... da requisicao
@@ -88,8 +88,36 @@ public class WebFrameworkDispatcherServlet extends HttpServlet{
                         
                         if( !data.isStaticUrl() ){
                             final String[] urlSplits = url.substring( 1 ).split( "/" );
-                            data.getUrlSplits().get(0).isParameter();
-                            data.getMethodParameters().get(0).getParamAnnotation();
+                            final Map<String, Object> mapaValores = new HashMap<>( urlSplits.length );
+
+                            final AtomicInteger index = new AtomicInteger( 0 );
+                            data.getUrlSplits().stream()
+                                .forEach( item -> {
+                                    final int i = index.getAndIncrement();
+                                    if( item.isParameter() )
+                                        mapaValores.put( item.getPath(), urlSplits[ i ] );
+                                    item.getTypeToMethod();
+                                } );
+                            
+                            index.set( 0 );
+                            final Object[] valores = new Object[ data.getMethodParameters().size() ];
+                            data.getMethodParameters().stream()
+                                .forEach( item -> {
+                                    if( item.getParamAnnotation().annotationType().isAssignableFrom( WebFrameworkBody.class ) ){
+                                    }else if( item.getParamAnnotation().annotationType().isAssignableFrom( WebFrameworkPathParameter.class ) ){
+                                        valores[ index.getAndIncrement() ] = mapaValores.get( item.getParamName() );
+                                    }else if( item.getParamAnnotation().annotationType().isAssignableFrom( WebFrameworkRequestParameter.class ) ){
+                                        // quando tem ?
+                                        // RequestParameter  ?id=abc
+                                        // System.out.println( "03: " + req.getParameterMap() );
+                                        // System.out.println( "04: " + req.getQueryString() );
+                                        final String[] paramsValues = req.getParameterValues( item.getParamName() );
+                                        if( paramsValues != null && paramsValues.length > 0 )
+                                            valores[ index.getAndIncrement() ] = paramsValues[ 0 ];
+                                    }else
+                                        valores[ index.getAndIncrement() ] = null;
+                                } );
+                            System.out.println( " ARGUMENTOS " + Arrays.stream( valores ).toList() );
                         }
 
 
