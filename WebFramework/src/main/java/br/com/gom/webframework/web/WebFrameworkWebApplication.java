@@ -162,13 +162,19 @@ public class WebFrameworkWebApplication{
                 for( Annotation annotation : method.getAnnotations() ){
                     final RequestControllerData data = RequestControllerData.builder()
                         .httpMethod( HTTP_METHOD_ENUM.valueOfByAnnotation( annotation ) )
-                        .url( getValueFromAnnotation( annotation ) )
+                        .url( getUrlValueFromAnnotation( annotation ) )
                         .controllerClass( className )
                         .controllerMethod( method.getName() )
                     .build();
+                    
                     data.setMethodParameters( extractParametersFromMethod( method ) );
+                    data.hasBodyParameterAnnotation( data.getMethodParameters().stream()
+                        .anyMatch( ParameterMethodControllerData::isBodyParameterAnnotation ) );
+                    data.hasRequestParameterAnnotation( data.getMethodParameters().stream()
+                        .anyMatch( ParameterMethodControllerData::isRequestParameterAnnotation ) );
+                    
                     data.setUrlSplits( extractUrlSplits( data.getUrl(), data.getMethodParameters() ) );
-                    data.setStaticUrl( data.getUrlSplits().stream().noneMatch( item -> item.isParameter() ) );
+                    data.setStaticUrl( data.getUrlSplits().stream().noneMatch( SplitUrlControllerData::isParameter ) );
                     if( !data.isStaticUrl() )
                         data.setUrlRegex( generateUrlRegex( data.getUrlSplits() ) );
                     ControllerMap.put( data );
@@ -208,7 +214,7 @@ public class WebFrameworkWebApplication{
                     if( Double.class.isAssignableFrom( item.getTypeToMethod() ) 
                         || Float.class.isAssignableFrom( item.getTypeToMethod() ) 
                         || BigDecimal.class.isAssignableFrom( item.getTypeToMethod() ) )
-                        return "[-0-9,.]*";
+                        return "[-.0-9]*";
                     return "\\d*";
                 }else if( String.class.isAssignableFrom( item.getTypeToMethod() ) 
                     || StringBuffer.class.isAssignableFrom( item.getTypeToMethod() ) 
@@ -222,30 +228,29 @@ public class WebFrameworkWebApplication{
 
     private static List<ParameterMethodControllerData> extractParametersFromMethod(final Method method){
         final List<ParameterMethodControllerData> parametersData = new ArrayList<>();
-        Optional<Annotation> annotation;
-        ParameterMethodControllerData paramData;
         for( Parameter parameter : method.getParameters() ){
-            annotation = Arrays.stream( parameter.getAnnotations() )
+            Arrays.stream( parameter.getAnnotations() )
                 .filter( item -> item.annotationType().isAssignableFrom( WebFrameworkBody.class )
                     || item.annotationType().isAssignableFrom( WebFrameworkPathParameter.class )
-                    || item.annotationType().isAssignableFrom( WebFrameworkRequestParameter.class )
-                ).findFirst();
-            if( annotation.isPresent() ){
-                paramData = ParameterMethodControllerData.builder()
-                    .paramClass( parameter.getType() )
-                    .paramAnnotation( annotation.get() )
-                    .build();
-                if( annotation.get().annotationType().isAssignableFrom( WebFrameworkPathParameter.class ) )
-                    paramData.setParamName( ( (WebFrameworkPathParameter)annotation.get() ).value() );
-                else if( annotation.get().annotationType().isAssignableFrom( WebFrameworkRequestParameter.class ) )
-                    paramData.setParamName( ( (WebFrameworkRequestParameter)annotation.get() ).value() );
-                parametersData.add( paramData  );
-            }
+                    || item.annotationType().isAssignableFrom( WebFrameworkRequestParameter.class ) )
+                .findFirst()
+                .ifPresentOrElse( 
+                    ann -> 
+                        parametersData.add( ParameterMethodControllerData.builder()
+                            .paramClass( parameter.getType() )
+                            .paramAnnotation( ann )
+                            .paramName( getNameParameterFromAnnotation( ann ) )
+                        .build() ), 
+                    () -> 
+                        parametersData.add( ParameterMethodControllerData.builder()
+                            .paramClass( parameter.getType() )
+                        .build() )
+                );
         }
         return Collections.unmodifiableList( parametersData );
     }
 
-    private static String getValueFromAnnotation(final Annotation annotation){
+    private static String getUrlValueFromAnnotation(final Annotation annotation){
         String url = null;
         final Optional<HTTP_METHOD_ENUM> httpMethod = Optional.ofNullable( 
             HTTP_METHOD_ENUM.valueOfByAnnotation( annotation ) );
@@ -262,6 +267,16 @@ public class WebFrameworkWebApplication{
                 url = "/" + url;
         }
         return url;
+    }
+
+    private static String getNameParameterFromAnnotation(final Annotation annotation){
+        if( annotation != null ){
+            if( annotation.annotationType().isAssignableFrom( WebFrameworkPathParameter.class ) )
+                return ( (WebFrameworkPathParameter)annotation ).value();
+            else if( annotation.annotationType().isAssignableFrom( WebFrameworkRequestParameter.class ) )
+                return ( (WebFrameworkRequestParameter)annotation ).value();
+        }
+        return null;
     }
 
 }

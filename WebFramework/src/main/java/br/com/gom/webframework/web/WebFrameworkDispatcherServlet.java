@@ -20,6 +20,7 @@ import br.com.gom.webframework.annotations.datarequests.WebFrameworkPathParamete
 import br.com.gom.webframework.annotations.datarequests.WebFrameworkRequestParameter;
 import br.com.gom.webframework.datastructures.controllers.ControllerInstance;
 import br.com.gom.webframework.datastructures.controllers.ControllerMap;
+import br.com.gom.webframework.datastructures.controllers.ParameterMethodControllerData;
 import br.com.gom.webframework.datastructures.controllers.RequestControllerData;
 import br.com.gom.webframework.datastructures.injections.DependencyInjectionInstance;
 import br.com.gom.webframework.datastructures.injections.ServiceImplementationMap;
@@ -56,11 +57,10 @@ public class WebFrameworkDispatcherServlet extends HttpServlet{
             url, httpMethod, data.getControllerClass(), data.getControllerMethod() );
 
         // verifica se existe uma instancia da classe correspondente, senao cria
-        Object controller;
         WebFrameworkLogger.log( MODULO_LOG, "Procurar instancia da controladora" );
         try{
             try( final PrintWriter out = new PrintWriter( resp.getWriter() ); ){
-                controller = ControllerInstance.getByKey( data.getControllerClass() );
+                Object controller = ControllerInstance.getByKey( data.getControllerClass() );
                 if( controller == null ){
                     WebFrameworkLogger.log( MODULO_LOG, "Criar nova instancia da controladora" );
                     controller = Class.forName( data.getControllerClass() ).getConstructor().newInstance();
@@ -69,16 +69,7 @@ public class WebFrameworkDispatcherServlet extends HttpServlet{
                 }
 
                 // extrair o metodo desta classe, ou seja o metodo que vai atender a requisicao.
-                // executar o metodo e escrever a saida dele
-                Method controllerMethod = null;
-                if( data.getMethodParameters() == null || data.getMethodParameters().isEmpty() )
-                    controllerMethod = controller.getClass().getMethod( data.getControllerMethod() );
-                else
-                    controllerMethod = controller.getClass().getMethod( data.getControllerMethod(), 
-                        data.getMethodParameters().stream()
-                            .map( item -> item.getParamClass() )
-                            .toList().toArray( new Class<?>[0] )
-                    );
+                final Method controllerMethod = findMethodFromController( data, controller );
                 
                 if( controllerMethod != null ){
                     final Gson gson = new Gson();
@@ -86,41 +77,30 @@ public class WebFrameworkDispatcherServlet extends HttpServlet{
                         WebFrameworkLogger.log( MODULO_LOG, "Metodo '%s' tem '%d' parametro(s)!", controllerMethod.getName(), 
                             controllerMethod.getParameterCount() );
                         
-                        if( !data.isStaticUrl() ){
-                            final String[] urlSplits = url.substring( 1 ).split( "/" );
-                            final Map<String, Object> mapaValores = new HashMap<>( urlSplits.length );
-
-                            final AtomicInteger index = new AtomicInteger( 0 );
-                            data.getUrlSplits().stream()
-                                .forEach( item -> {
-                                    final int i = index.getAndIncrement();
-                                    if( item.isParameter() )
-                                        mapaValores.put( item.getPath(), urlSplits[ i ] );
-                                    item.getTypeToMethod();
-                                } );
-                            
-                            index.set( 0 );
-                            final Object[] valores = new Object[ data.getMethodParameters().size() ];
-                            data.getMethodParameters().stream()
-                                .forEach( item -> {
-                                    if( item.getParamAnnotation().annotationType().isAssignableFrom( WebFrameworkBody.class ) ){
-                                    }else if( item.getParamAnnotation().annotationType().isAssignableFrom( WebFrameworkPathParameter.class ) ){
-                                        valores[ index.getAndIncrement() ] = mapaValores.get( item.getParamName() );
-                                    }else if( item.getParamAnnotation().annotationType().isAssignableFrom( WebFrameworkRequestParameter.class ) ){
-                                        // quando tem ?
-                                        // RequestParameter  ?id=abc
-                                        // System.out.println( "03: " + req.getParameterMap() );
-                                        // System.out.println( "04: " + req.getQueryString() );
-                                        final String[] paramsValues = req.getParameterValues( item.getParamName() );
-                                        if( paramsValues != null && paramsValues.length > 0 )
-                                            valores[ index.getAndIncrement() ] = paramsValues[ 0 ];
-                                    }else
-                                        valores[ index.getAndIncrement() ] = null;
-                                } );
-                            System.out.println( " ARGUMENTOS " + Arrays.stream( valores ).toList() );
+                        final Map<String, Object> mapaValores = extractValuesFromUrl( url, data );
+                        final Object[] valuesToMethod = new Object[ data.getMethodParameters().size() ];
+                        
+                        final AtomicInteger index = new AtomicInteger( 0 );
+                        for( ParameterMethodControllerData paramMethodData : data.getMethodParameters() ){
+                            if( paramMethodData.getParamAnnotation().annotationType().isAssignableFrom( WebFrameworkBody.class ) ){
+                                valuesToMethod[ index.getAndIncrement() ] = gson.fromJson( this.readBytesFromRequest( req ), paramMethodData.getParamClass() );
+                            }else if( paramMethodData.getParamAnnotation().annotationType().isAssignableFrom( WebFrameworkPathParameter.class ) ){
+                                valuesToMethod[ index.getAndIncrement() ] = mapaValores.get( paramMethodData.getParamName() );
+                            }else if( paramMethodData.getParamAnnotation().annotationType().isAssignableFrom( WebFrameworkRequestParameter.class ) ){
+                                final String[] paramsValues = req.getParameterValues( paramMethodData.getParamName() );
+                                if( paramsValues != null && paramsValues.length > 0 ){
+                                    if( Long.class.isAssignableFrom( paramMethodData.getParamClass() ) )
+                                        valuesToMethod[ index.getAndIncrement() ] = new Long( paramsValues[ 0 ] );
+                                    else
+                                        valuesToMethod[ index.getAndIncrement() ] = paramsValues[ 0 ];
+                                }
+                            }else
+                                valuesToMethod[ index.getAndIncrement() ] = null;
                         }
+                        System.out.println( " ARGUMENTOS " + Arrays.stream( valuesToMethod ).toList() );
+                        //System.out.println( " CHAMADA [" + controllerMethod.getName() + "] " + controllerMethod.invoke( controller, valuesToMethod ) );
 
-
+                        /*
                         Object arg;
                         final Parameter parameter = controllerMethod.getParameters()[ 0 ];
                         if( parameter.getAnnotations()[ 0 ].annotationType().isAssignableFrom( WebFrameworkBody.class ) ){
@@ -132,7 +112,10 @@ public class WebFrameworkDispatcherServlet extends HttpServlet{
                                 controllerMethod.getName(), parameter.getType().toString() );
                             out.println( gson.toJson( controllerMethod.invoke( controller, arg ) ) );
                             out.flush();
-                        }
+                        }*/
+
+                        out.println( gson.toJson( controllerMethod.invoke( controller, valuesToMethod ) ) );
+                        out.flush();
                     }else{
                         WebFrameworkLogger.log( MODULO_LOG, "Invocar o metodo '%s' para requisicao.", 
                             controllerMethod.getName() );
@@ -192,6 +175,35 @@ public class WebFrameworkDispatcherServlet extends HttpServlet{
             }
         }
         return buffer.toString();
+    }
+
+    private Method findMethodFromController(final RequestControllerData data, final Object controller) throws NoSuchMethodException, SecurityException{
+        // extrair o metodo desta classe, ou seja o metodo que vai atender a requisicao.
+        if( data.getMethodParameters() == null || data.getMethodParameters().isEmpty() )
+            return controller.getClass().getMethod( data.getControllerMethod() );
+        return controller.getClass().getMethod( data.getControllerMethod(), 
+            data.getMethodParameters().stream()
+                .map( item -> item.getParamClass() )
+                .toList().toArray( new Class<?>[0] ) );
+    }
+
+    private Map<String, Object> extractValuesFromUrl(final String url, final RequestControllerData data){
+        final Map<String, Object> mapaValores = new HashMap<>();
+        if( !data.isStaticUrl() ){
+            final String[] urlSplits = url.substring( 1 ).split( "/" );
+            final AtomicInteger index = new AtomicInteger( 0 );
+            data.getUrlSplits().stream()
+                .forEach( item -> {
+                    final int i = index.getAndIncrement();
+                    if( item.isParameter() ){
+                        if( Long.class.isAssignableFrom( item.getTypeToMethod() ) )
+                            mapaValores.put( item.getPath(), new Long( urlSplits[ i ] ) );
+                        else
+                            mapaValores.put( item.getPath(), urlSplits[ i ] );
+                    }
+                } );
+        }
+        return mapaValores;
     }
 
 }

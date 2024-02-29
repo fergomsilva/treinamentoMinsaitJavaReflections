@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.Accessors;
 
 
 @Data
@@ -23,6 +24,8 @@ public class RequestControllerData{
     private String controllerClass;
     private String controllerMethod;
     private List<ParameterMethodControllerData> methodParameters;
+    private @Accessors( fluent=true ) boolean hasBodyParameterAnnotation;
+    private @Accessors( fluent=true ) boolean hasRequestParameterAnnotation;
 
     
     @Override
