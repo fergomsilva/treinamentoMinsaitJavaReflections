@@ -30,12 +30,9 @@ public class RequestControllerData{
     
     @Override
     public String toString(){
-        if( !this.isStaticUrl() )
-            return String.format( "\t(%6s) %s [%s] [%s.%s(%d)]", 
-                this.getHttpMethod(), this.getUrl(), this.getUrlRegex(), this.getControllerClass(), 
-                this.getControllerMethod(), this.getMethodParameters().size() );
-        return String.format( "\t(%6s) %s [%s.%s()]", this.getHttpMethod(), 
-            this.getUrl(), this.getControllerClass(), this.getControllerMethod() );
+        return String.format( "\t(%6s) %-10s\t[%s.%s]", 
+            this.getHttpMethod(), ( this.getUrl() + ( this.hasRequestParameterAnnotation() ? "?..." : "" ) ),
+            this.getControllerClass(), this.getControllerMethod() );
     }
 
 }

@@ -8,12 +8,16 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 
 import br.com.gom.webframework.annotations.datarequests.WebFrameworkBody;
 import br.com.gom.webframework.annotations.datarequests.WebFrameworkPathParameter;
@@ -33,6 +37,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 public class WebFrameworkDispatcherServlet extends HttpServlet{
 
+    private static final Gson GSON = new Gson();
     private static final String MODULO_LOG = "WebFrameworkDispatcherServlet";
 
     @Override
@@ -56,80 +61,77 @@ public class WebFrameworkDispatcherServlet extends HttpServlet{
         WebFrameworkLogger.log( MODULO_LOG, "URL: %s (%s) - Handler: %s.%s", 
             url, httpMethod, data.getControllerClass(), data.getControllerMethod() );
 
-        // verifica se existe uma instancia da classe correspondente, senao cria
-        WebFrameworkLogger.log( MODULO_LOG, "Procurar instancia da controladora" );
         try{
-            try( final PrintWriter out = new PrintWriter( resp.getWriter() ); ){
-                Object controller = ControllerInstance.getByKey( data.getControllerClass() );
-                if( controller == null ){
-                    WebFrameworkLogger.log( MODULO_LOG, "Criar nova instancia da controladora" );
-                    controller = Class.forName( data.getControllerClass() ).getConstructor().newInstance();
-                    ControllerInstance.put( data.getControllerClass(), controller );
-                    this.injectDependencies( controller );
+            final Object controller = getController( data.getControllerClass() );
+            final Method controllerMethod = findMethodFromController( data, controller );
+            if( controllerMethod != null ){
+                // metodo tem parametros???
+                if( data.getMethodParameters() != null && !data.getMethodParameters().isEmpty() )
+                    this.writeReturnOut( this.invokeMethodWithParameters( controllerMethod, controller, 
+                        url, data, req ), resp );
+                else{
+                    WebFrameworkLogger.log( MODULO_LOG, "Invocar o metodo '%s' para requisicao.\n", 
+                        controllerMethod.getName() );
+                    this.writeReturnOut( controllerMethod.invoke( controller ), resp );
                 }
-
-                // extrair o metodo desta classe, ou seja o metodo que vai atender a requisicao.
-                final Method controllerMethod = findMethodFromController( data, controller );
-                
-                if( controllerMethod != null ){
-                    final Gson gson = new Gson();
-                    if( data.getMethodParameters() != null && !data.getMethodParameters().isEmpty() ){ // metodo tem parametros???
-                        WebFrameworkLogger.log( MODULO_LOG, "Metodo '%s' tem '%d' parametro(s)!", controllerMethod.getName(), 
-                            controllerMethod.getParameterCount() );
-                        
-                        final Map<String, Object> mapaValores = extractValuesFromUrl( url, data );
-                        final Object[] valuesToMethod = new Object[ data.getMethodParameters().size() ];
-                        
-                        final AtomicInteger index = new AtomicInteger( 0 );
-                        for( ParameterMethodControllerData paramMethodData : data.getMethodParameters() ){
-                            if( paramMethodData.getParamAnnotation().annotationType().isAssignableFrom( WebFrameworkBody.class ) ){
-                                valuesToMethod[ index.getAndIncrement() ] = gson.fromJson( this.readBytesFromRequest( req ), paramMethodData.getParamClass() );
-                            }else if( paramMethodData.getParamAnnotation().annotationType().isAssignableFrom( WebFrameworkPathParameter.class ) ){
-                                valuesToMethod[ index.getAndIncrement() ] = mapaValores.get( paramMethodData.getParamName() );
-                            }else if( paramMethodData.getParamAnnotation().annotationType().isAssignableFrom( WebFrameworkRequestParameter.class ) ){
-                                final String[] paramsValues = req.getParameterValues( paramMethodData.getParamName() );
-                                if( paramsValues != null && paramsValues.length > 0 ){
-                                    if( Long.class.isAssignableFrom( paramMethodData.getParamClass() ) )
-                                        valuesToMethod[ index.getAndIncrement() ] = new Long( paramsValues[ 0 ] );
-                                    else
-                                        valuesToMethod[ index.getAndIncrement() ] = paramsValues[ 0 ];
-                                }
-                            }else
-                                valuesToMethod[ index.getAndIncrement() ] = null;
-                        }
-                        System.out.println( " ARGUMENTOS " + Arrays.stream( valuesToMethod ).toList() );
-                        //System.out.println( " CHAMADA [" + controllerMethod.getName() + "] " + controllerMethod.invoke( controller, valuesToMethod ) );
-
-                        /*
-                        Object arg;
-                        final Parameter parameter = controllerMethod.getParameters()[ 0 ];
-                        if( parameter.getAnnotations()[ 0 ].annotationType().isAssignableFrom( WebFrameworkBody.class ) ){
-                            WebFrameworkLogger.log( MODULO_LOG, "\tProcurando parmetro da requisicao do tipo '%s' ", parameter.getType().getName() );
-                            final String body = this.readBytesFromRequest( req );
-                            WebFrameworkLogger.log( MODULO_LOG, "\tconteudo do parametro '%s' ", body );
-                                arg = gson.fromJson( body, parameter.getType() );
-                            WebFrameworkLogger.log( MODULO_LOG, "Invocar o metodo '%s', com parametro do tipo '%s' para requisicao.", 
-                                controllerMethod.getName(), parameter.getType().toString() );
-                            out.println( gson.toJson( controllerMethod.invoke( controller, arg ) ) );
-                            out.flush();
-                        }*/
-
-                        out.println( gson.toJson( controllerMethod.invoke( controller, valuesToMethod ) ) );
-                        out.flush();
-                    }else{
-                        WebFrameworkLogger.log( MODULO_LOG, "Invocar o metodo '%s' para requisicao.", 
-                            controllerMethod.getName() );
-                        out.println( gson.toJson( controllerMethod.invoke( controller ) ) );
-                        out.flush();
-                    }
-                }else{
-                    WebFrameworkLogger.log( MODULO_LOG, "Metodo '%s.%s' nao encontrado ou nao acessivel!", 
-                        data.getControllerClass(), data.getControllerMethod() );
-                    resp.setStatus( HttpServletResponse.SC_INTERNAL_SERVER_ERROR );
-                }
+            }else{
+                WebFrameworkLogger.log( MODULO_LOG, "Metodo '%s.%s' nao encontrado ou nao acessivel!\n", 
+                    data.getControllerClass(), data.getControllerMethod() );
+                resp.setStatus( HttpServletResponse.SC_INTERNAL_SERVER_ERROR );
             }
         }catch( Exception e ){
             WebFrameworkLogger.error( MODULO_LOG, e, e.getMessage() );
+        }
+    }
+
+    private Object getController(final String controllerClass) throws InstantiationException, IllegalAccessException, 
+    IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, ClassNotFoundException{
+        // verifica se existe uma instancia da classe correspondente, senao cria
+        WebFrameworkLogger.log( MODULO_LOG, "Procurar instancia da controladora" );
+        Object controller = ControllerInstance.getByKey( controllerClass );
+        if( controller == null ){
+            WebFrameworkLogger.log( MODULO_LOG, "Criar nova instancia da controladora" );
+            controller = Class.forName( controllerClass ).getConstructor().newInstance();
+            ControllerInstance.put( controllerClass, controller );
+            this.injectDependencies( controller );
+        }
+        return controller;
+    }
+
+    private Object invokeMethodWithParameters(final Method controllerMethod, final Object controller, 
+        final String url, final RequestControllerData data, final HttpServletRequest req) 
+    throws JsonSyntaxException, IOException, IllegalAccessException, InvocationTargetException{
+        WebFrameworkLogger.log( MODULO_LOG, "Metodo '%s' tem '%d' parametro(s)!", controllerMethod.getName(), 
+            controllerMethod.getParameterCount() );
+        
+        final Map<String, Object> mapaValores = extractValuesFromRequest( url, req.getParameterMap(), data );
+        final Object[] valuesToMethod = new Object[ data.getMethodParameters().size() ];
+        
+        final AtomicInteger index = new AtomicInteger( 0 );
+        WebFrameworkLogger.log( MODULO_LOG, "\tMontando array com '%d' argumento(s) para passar na chamada do metodo.", 
+            valuesToMethod.length );
+        for( ParameterMethodControllerData paramMethodData : data.getMethodParameters() ){
+            if( paramMethodData.getParamAnnotation().annotationType().isAssignableFrom( WebFrameworkBody.class ) )
+                valuesToMethod[ index.getAndIncrement() ] = GSON.fromJson( this.readBytesFromRequest( req ), 
+                    paramMethodData.getParamClass() );
+            else if( paramMethodData.getParamAnnotation().annotationType().isAssignableFrom( WebFrameworkPathParameter.class ) )
+                valuesToMethod[ index.getAndIncrement() ] = mapaValores.get( paramMethodData.getParamName() );
+            else if( paramMethodData.getParamAnnotation().annotationType().isAssignableFrom( WebFrameworkRequestParameter.class ) )
+                valuesToMethod[ index.getAndIncrement() ] = mapaValores.get( "query-" + paramMethodData.getParamName() );
+            else
+                valuesToMethod[ index.getAndIncrement() ] = null;
+        }
+        WebFrameworkLogger.log( MODULO_LOG, "Invocar o metodo '%s' com argumentos para requisicao.\n", 
+            controllerMethod.getName() );
+        return controllerMethod.invoke( controller, valuesToMethod );
+    }
+
+    private void writeReturnOut(final Object returnValue, final HttpServletResponse resp) throws IOException{
+        if( returnValue == null )
+            return;
+        try( final PrintWriter out = new PrintWriter( resp.getWriter() ) ){
+            out.println( GSON.toJson( returnValue ) );
+            out.flush();
         }
     }
 
@@ -177,7 +179,8 @@ public class WebFrameworkDispatcherServlet extends HttpServlet{
         return buffer.toString();
     }
 
-    private Method findMethodFromController(final RequestControllerData data, final Object controller) throws NoSuchMethodException, SecurityException{
+    private Method findMethodFromController(final RequestControllerData data, final Object controller) 
+    throws NoSuchMethodException, SecurityException{
         // extrair o metodo desta classe, ou seja o metodo que vai atender a requisicao.
         if( data.getMethodParameters() == null || data.getMethodParameters().isEmpty() )
             return controller.getClass().getMethod( data.getControllerMethod() );
@@ -187,23 +190,51 @@ public class WebFrameworkDispatcherServlet extends HttpServlet{
                 .toList().toArray( new Class<?>[0] ) );
     }
 
-    private Map<String, Object> extractValuesFromUrl(final String url, final RequestControllerData data){
+    private Map<String, Object> extractValuesFromRequest(final String url, final Map<String, String[]> queryParameters, 
+    final RequestControllerData data){
+        WebFrameworkLogger.log( MODULO_LOG, "\tExtraindo valores dos parametros da requisicao." );
         final Map<String, Object> mapaValores = new HashMap<>();
         if( !data.isStaticUrl() ){
             final String[] urlSplits = url.substring( 1 ).split( "/" );
             final AtomicInteger index = new AtomicInteger( 0 );
-            data.getUrlSplits().stream()
+            data.getUrlSplits().stream().forEach( item -> {
+                final int i = index.getAndIncrement();
+                if( item.isParameter() )
+                    mapaValores.put( item.getPath(), convertStringToValue( urlSplits[ i ], 
+                        item.getParamClassFromMethod() ) );
+            } );
+        }
+        if( data.hasRequestParameterAnnotation() && queryParameters != null && !queryParameters.isEmpty() ){
+            data.getMethodParameters().stream()
+                .filter( item -> item.isRequestParameterAnnotation() && queryParameters.containsKey( item.getParamName() ) )
                 .forEach( item -> {
-                    final int i = index.getAndIncrement();
-                    if( item.isParameter() ){
-                        if( Long.class.isAssignableFrom( item.getTypeToMethod() ) )
-                            mapaValores.put( item.getPath(), new Long( urlSplits[ i ] ) );
-                        else
-                            mapaValores.put( item.getPath(), urlSplits[ i ] );
-                    }
+                    final String[] values = queryParameters.get( item.getParamName() );
+                    mapaValores.put( "query-" + item.getParamName(), 
+                        convertStringToValue( ( ( values != null && values.length > 0 ) ? values[ 0 ] : null ), 
+                        item.getParamClass() ) );
                 } );
         }
         return mapaValores;
+    }
+
+    private Object convertStringToValue(final String value, final Class<?> valueClass){
+        if( value != null && !value.strip().isEmpty() ){
+            if( Byte.class.isAssignableFrom( valueClass ) )
+                return Byte.valueOf( value );
+            else if( Integer.class.isAssignableFrom( valueClass ) )
+                return Integer.valueOf( value );
+            else if( Long.class.isAssignableFrom( valueClass ) )
+                return Long.valueOf( value );
+            else if( BigInteger.class.isAssignableFrom( valueClass ) )
+                return new BigInteger( value );
+            else if( Float.class.isAssignableFrom( valueClass ) )
+                return Float.valueOf( value );
+            else if( Double.class.isAssignableFrom( valueClass ) )
+                return Double.valueOf( value );
+            else if( BigDecimal.class.isAssignableFrom( valueClass ) )
+                return new BigDecimal( value );
+        }
+        return value;
     }
 
 }

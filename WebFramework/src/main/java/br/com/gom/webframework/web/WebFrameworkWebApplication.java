@@ -87,7 +87,7 @@ public class WebFrameworkWebApplication{
                 "WebFrameworkDispacherServlet" );
 
             final long fim = System.currentTimeMillis();
-            WebFrameworkLogger.log( LOG_MODULO, "Tomcat iniciado em %dms", (fim - ini) );
+            WebFrameworkLogger.log( LOG_MODULO, "Tomcat iniciado em %dms\n", (fim - ini) );
 
             // start
             tomcat.start();
@@ -106,7 +106,7 @@ public class WebFrameworkWebApplication{
                 for( Annotation classAnnotation : annotations ){
                     if( classAnnotation.annotationType().isAssignableFrom( WebFrameworkController.class ) ){
                         WebFrameworkLogger.log( LOG_MODULO_METADATA, "Found a controller %s", classe );
-                        extractMethods( classe );
+                        extractMethodsFromController( classe );
                     }else if( classAnnotation.annotationType().isAssignableFrom( WebFrameworkService.class ) ){
                         WebFrameworkLogger.log( LOG_MODULO_METADATA, "Found a service Implementation %s", classe );
                         for( Class<?> interfaceWeb : Class.forName( classe ).getInterfaces() ){
@@ -155,15 +155,16 @@ public class WebFrameworkWebApplication{
                 count.get() );
     }
 
-    private static void extractMethods(final String className) throws SecurityException, ClassNotFoundException{
+    private static void extractMethodsFromController(final String classNameController) throws SecurityException, ClassNotFoundException{
         // recuperar todos os métodos da classe
-        for( Method method : Class.forName( className ).getDeclaredMethods() ){
+        for( Method method : Class.forName( classNameController ).getDeclaredMethods() ){
             if( Modifier.PUBLIC == method.getModifiers() ){
+                //LOG_MODULO_METADATA
                 for( Annotation annotation : method.getAnnotations() ){
                     final RequestControllerData data = RequestControllerData.builder()
                         .httpMethod( HTTP_METHOD_ENUM.valueOfByAnnotation( annotation ) )
                         .url( getUrlValueFromAnnotation( annotation ) )
-                        .controllerClass( className )
+                        .controllerClass( classNameController )
                         .controllerMethod( method.getName() )
                     .build();
                     
@@ -196,7 +197,7 @@ public class WebFrameworkWebApplication{
                 if( path.matches( "^[{]\\S*[}]$" ) ){
                     final int indexParam = parametersMethod.indexOf( ParameterMethodControllerData.builder().paramName( data.getPath() ).build() );
                     if( indexParam > -1 ){
-                        data.setTypeToMethod( parametersMethod.get( indexParam ).getParamClass() );
+                        data.setParamClassFromMethod( parametersMethod.get( indexParam ).getParamClass() );
                         data.setIndexParameterMethod( indexParam );
                     }
                 }
@@ -210,15 +211,15 @@ public class WebFrameworkWebApplication{
             if( !item.isParameter() )
                 return item.getPath();
             else{
-                if( Number.class.isAssignableFrom( item.getTypeToMethod().getSuperclass() ) ){
-                    if( Double.class.isAssignableFrom( item.getTypeToMethod() ) 
-                        || Float.class.isAssignableFrom( item.getTypeToMethod() ) 
-                        || BigDecimal.class.isAssignableFrom( item.getTypeToMethod() ) )
+                if( Number.class.isAssignableFrom( item.getParamClassFromMethod().getSuperclass() ) ){
+                    if( Double.class.isAssignableFrom( item.getParamClassFromMethod() ) 
+                        || Float.class.isAssignableFrom( item.getParamClassFromMethod() ) 
+                        || BigDecimal.class.isAssignableFrom( item.getParamClassFromMethod() ) )
                         return "[-.0-9]*";
                     return "\\d*";
-                }else if( String.class.isAssignableFrom( item.getTypeToMethod() ) 
-                    || StringBuffer.class.isAssignableFrom( item.getTypeToMethod() ) 
-                    || StringBuilder.class.isAssignableFrom( item.getTypeToMethod() ) )
+                }else if( String.class.isAssignableFrom( item.getParamClassFromMethod() ) 
+                    || StringBuffer.class.isAssignableFrom( item.getParamClassFromMethod() ) 
+                    || StringBuilder.class.isAssignableFrom( item.getParamClassFromMethod() ) )
                     return "\\w*";
                 return "\\S*";
             }

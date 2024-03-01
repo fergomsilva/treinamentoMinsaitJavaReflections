@@ -17,18 +17,18 @@ import lombok.NoArgsConstructor;
 public class SplitUrlControllerData implements Comparable<SplitUrlControllerData>, Comparator<SplitUrlControllerData>{
     
     private String path;
-    private Class<?> typeToMethod;
+    private Class<?> paramClassFromMethod;
     private @Builder.Default int indexParameterMethod = -1;
     
 
     public boolean isParameter(){
-        return this.getIndexParameterMethod() >= 0 && this.getTypeToMethod() != null;
+        return this.getIndexParameterMethod() >= 0 && this.getParamClassFromMethod() != null;
     }
     
     @Override
     public String toString(){
-        return this.isParameter() ? String.format( "path[%s];isParameter[%s];Type[%s];Index[%d];", 
-                this.getPath(), this.isParameter(), this.getTypeToMethod(), this.getIndexParameterMethod() )
+        return this.isParameter() ? String.format( "path[%s];isParameter[%s];Class[%s];index[%d];", 
+                this.getPath(), this.isParameter(), this.getParamClassFromMethod(), this.getIndexParameterMethod() )
             : String.format( "path[%s];isParameter[%s];", this.getPath(), this.isParameter() );
     }
 
