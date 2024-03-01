@@ -224,10 +224,10 @@ public class WebFrameworkWebApplication{
                         || BigDecimal.class.isAssignableFrom( item.getParamClassFromMethod() ) )
                         return "[-.0-9]*";
                     return "\\d*";
-                }else if( String.class.isAssignableFrom( item.getParamClassFromMethod() ) 
+                }/*else if( String.class.isAssignableFrom( item.getParamClassFromMethod() ) 
                     || StringBuffer.class.isAssignableFrom( item.getParamClassFromMethod() ) 
                     || StringBuilder.class.isAssignableFrom( item.getParamClassFromMethod() ) )
-                    return "\\w*";
+                    return "\\w*";*/
                 return "\\S*";
             }
         } ).toList() );

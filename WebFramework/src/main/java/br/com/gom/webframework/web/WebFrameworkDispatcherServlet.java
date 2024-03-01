@@ -9,6 +9,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -40,6 +41,8 @@ public class WebFrameworkDispatcherServlet extends HttpServlet{
     @Override
     protected void service(final HttpServletRequest req, final HttpServletResponse resp) 
     throws ServletException, IOException{
+        req.setCharacterEncoding( StandardCharsets.UTF_8.name() );
+        resp.setCharacterEncoding( StandardCharsets.UTF_8.name() );
         // ignorar o favIcon
         if( req.getRequestURL().toString().endsWith( "favicon.ico" ) )
             return;
@@ -78,6 +81,12 @@ public class WebFrameworkDispatcherServlet extends HttpServlet{
             }
         }catch( Exception e ){
             WebFrameworkLogger.error( MODULO_LOG, e, e.getMessage() );
+            if( e.getCause() != null && e.getCause().getLocalizedMessage() != null )
+                resp.sendError( HttpServletResponse.SC_BAD_REQUEST, e.getCause().getLocalizedMessage() );
+            else if( e.getLocalizedMessage() != null )
+                resp.sendError( HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getLocalizedMessage() );
+            else
+                resp.setStatus( HttpServletResponse.SC_INTERNAL_SERVER_ERROR );
         }
     }
 
