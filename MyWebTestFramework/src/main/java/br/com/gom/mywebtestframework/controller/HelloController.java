@@ -116,7 +116,7 @@ public class HelloController{
 
     @WebFrameworkGetMethod( "/injected/subnivel" )
     public String chamadaCustomNivel2(){
-        return this.iservice.chamadaCustomSubnivel( "Hello injected subnivel" );
+        return this.iservice.chamadaCustomRepository( "Hello injected repository" );
     }
 
 }

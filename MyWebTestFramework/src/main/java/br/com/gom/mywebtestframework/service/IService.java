@@ -5,6 +5,6 @@ public interface IService {
     
     String chamadaCustom(final String mensagem);
 
-    String chamadaCustomSubnivel(final String mensagem);
+    String chamadaCustomRepository(final String mensagem);
 
 }

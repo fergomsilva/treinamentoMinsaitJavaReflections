@@ -7,11 +7,8 @@ import java.io.PrintWriter;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -22,12 +19,12 @@ import com.google.gson.JsonSyntaxException;
 import br.com.gom.webframework.annotations.datarequests.WebFrameworkBody;
 import br.com.gom.webframework.annotations.datarequests.WebFrameworkPathParameter;
 import br.com.gom.webframework.annotations.datarequests.WebFrameworkRequestParameter;
+import br.com.gom.webframework.datastructures.InterfaceImplementationMap;
 import br.com.gom.webframework.datastructures.controllers.ControllerInstance;
 import br.com.gom.webframework.datastructures.controllers.ControllerMap;
 import br.com.gom.webframework.datastructures.controllers.ParameterMethodControllerData;
 import br.com.gom.webframework.datastructures.controllers.RequestControllerData;
 import br.com.gom.webframework.datastructures.injections.DependencyInjectionInstance;
-import br.com.gom.webframework.datastructures.injections.ServiceImplementationMap;
 import br.com.gom.webframework.util.WebFrameworkLogger;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
@@ -141,28 +138,28 @@ public class WebFrameworkDispatcherServlet extends HttpServlet{
         // ver apenas os campos anotados por Inject
         String attrTipo = null;
         String implType = null;
-        Object serviceImpl = null;
+        Object classImpl = null;
         for( Field attr : mainObj.getClass().getDeclaredFields() ){
             attrTipo = attr.getType().getName();
             if( DependencyInjectionInstance.getByKey( attrTipo ) == null ){
                 WebFrameworkLogger.log( MODULO_LOG, "Injetar '%s' do tipo '%s'", attr.getName(), attrTipo );
                 // tem declaracao da interface?
-                implType = ServiceImplementationMap.getByKey( attrTipo );
+                implType = InterfaceImplementationMap.getByKey( attrTipo );
                 WebFrameworkLogger.log( MODULO_LOG, "Procurar instancias de '%s'", implType );
                 if( implType != null ){
                     WebFrameworkLogger.log( MODULO_LOG, "Injetar novo objeto" );
-                    serviceImpl = DependencyInjectionInstance.getByKey( implType );
-                    if( serviceImpl == null ){
-                        serviceImpl = Class.forName( implType ).getDeclaredConstructor().newInstance();
-                        DependencyInjectionInstance.put( implType, serviceImpl );
+                    classImpl = DependencyInjectionInstance.getByKey( implType );
+                    if( classImpl == null ){
+                        classImpl = Class.forName( implType ).getDeclaredConstructor().newInstance();
+                        DependencyInjectionInstance.put( implType, classImpl );
                     }
                     // atribuir essa instancia ao atributo anotado - INJECAO DE DEPENDENCIA
                     attr.setAccessible( true );
-                    attr.set( mainObj, serviceImpl );
+                    attr.set( mainObj, classImpl );
                     WebFrameworkLogger.log( MODULO_LOG, "Objeto injetado com sucesso!" );
                     WebFrameworkLogger.log( MODULO_LOG, "Verificar injecoes da implementacao %s.", 
-                        serviceImpl.getClass().getName() );
-                    this.injectDependencies( serviceImpl );
+                        classImpl.getClass().getName() );
+                    this.injectDependencies( classImpl );
                 }
             }
         }

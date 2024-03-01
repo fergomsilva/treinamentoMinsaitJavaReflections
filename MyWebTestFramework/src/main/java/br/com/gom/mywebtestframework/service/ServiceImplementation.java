@@ -1,5 +1,6 @@
 package br.com.gom.mywebtestframework.service;
 
+import br.com.gom.mywebtestframework.repository.IRepository;
 import br.com.gom.webframework.annotations.WebFrameworkInject;
 import br.com.gom.webframework.annotations.WebFrameworkService;
 
@@ -8,7 +9,7 @@ import br.com.gom.webframework.annotations.WebFrameworkService;
 public class ServiceImplementation implements IService{
 
     @WebFrameworkInject
-    private IServiceSubnivel serviceSubnivel;
+    private IRepository repository;
 
     @Override
     public String chamadaCustom(String mensagem){
@@ -16,8 +17,8 @@ public class ServiceImplementation implements IService{
     }
 
     @Override
-    public String chamadaCustomSubnivel(final String mensagem){
-        return this.serviceSubnivel.chamadaCustomNivel2( mensagem );
+    public String chamadaCustomRepository(final String mensagem){
+        return this.repository.chamadaCustomRepository( mensagem );
     }
     
 }

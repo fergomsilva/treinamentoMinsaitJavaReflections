@@ -21,6 +21,7 @@ import org.apache.catalina.connector.Connector;
 import org.apache.catalina.startup.Tomcat;
 
 import br.com.gom.webframework.annotations.WebFrameworkController;
+import br.com.gom.webframework.annotations.WebFrameworkRepository;
 import br.com.gom.webframework.annotations.WebFrameworkService;
 import br.com.gom.webframework.annotations.datarequests.WebFrameworkBody;
 import br.com.gom.webframework.annotations.datarequests.WebFrameworkPathParameter;
@@ -29,12 +30,12 @@ import br.com.gom.webframework.annotations.httpmethods.WebFrameworkDeleteMethod;
 import br.com.gom.webframework.annotations.httpmethods.WebFrameworkGetMethod;
 import br.com.gom.webframework.annotations.httpmethods.WebFrameworkPostMethod;
 import br.com.gom.webframework.annotations.httpmethods.WebFrameworkPutMethod;
+import br.com.gom.webframework.datastructures.InterfaceImplementationMap;
 import br.com.gom.webframework.datastructures.configs.WebFrameworkConfigMap;
 import br.com.gom.webframework.datastructures.controllers.ControllerMap;
 import br.com.gom.webframework.datastructures.controllers.ParameterMethodControllerData;
 import br.com.gom.webframework.datastructures.controllers.RequestControllerData;
 import br.com.gom.webframework.datastructures.controllers.SplitUrlControllerData;
-import br.com.gom.webframework.datastructures.injections.ServiceImplementationMap;
 import br.com.gom.webframework.enumerations.HTTP_METHOD_ENUM;
 import br.com.gom.webframework.explorer.ClassExplorer;
 import br.com.gom.webframework.util.WebFrameworkLogger;
@@ -111,7 +112,13 @@ public class WebFrameworkWebApplication{
                         WebFrameworkLogger.log( LOG_MODULO_METADATA, "Found a service Implementation %s", classe );
                         for( Class<?> interfaceWeb : Class.forName( classe ).getInterfaces() ){
                             WebFrameworkLogger.log( LOG_MODULO_METADATA, "Class implements %s", interfaceWeb.getName() );
-                            ServiceImplementationMap.put( interfaceWeb.getName(), classe );
+                            InterfaceImplementationMap.put( interfaceWeb.getName(), classe );
+                        }
+                    }else if( classAnnotation.annotationType().isAssignableFrom( WebFrameworkRepository.class ) ){
+                        WebFrameworkLogger.log( LOG_MODULO_METADATA, "Found a repository Implementation %s", classe );
+                        for( Class<?> interfaceRepo : Class.forName( classe ).getInterfaces() ){
+                            WebFrameworkLogger.log( LOG_MODULO_METADATA, "Class implements %s", interfaceRepo.getName() );
+                            InterfaceImplementationMap.put( interfaceRepo.getName(), classe );
                         }
                     }
                 }
