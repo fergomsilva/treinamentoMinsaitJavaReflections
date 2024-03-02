@@ -2,16 +2,10 @@ package br.com.gom.webframework.enumerations;
 
 import java.util.Arrays;
 
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-
 
 /**
  * Enumeração com as configurações padrão do framework.
  */
-@Getter
-@AllArgsConstructor( access=AccessLevel.PRIVATE )
 public enum WEBFRAMEWORK_CONFIG_ENUM{
    
     /**
@@ -28,6 +22,21 @@ public enum WEBFRAMEWORK_CONFIG_ENUM{
      * ID da configuração se na variavel de ambiente.
      */
     private String idEnvironmentVar;
+
+
+    private WEBFRAMEWORK_CONFIG_ENUM(final String idProperties, final String idEnvironmentVar){
+        this.idProperties = idProperties;
+        this.idEnvironmentVar = idEnvironmentVar;
+    }
+
+    public String getIdProperties(){
+        return this.idProperties;
+    }
+
+    private String getIdEnvironmentVar(){
+        return this.idEnvironmentVar;
+    }
+
 
     /**
      * Obtem o enum a partir do ID informado, pode ser tanto o ID do properties ou da 

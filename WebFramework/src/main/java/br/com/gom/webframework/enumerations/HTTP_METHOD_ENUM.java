@@ -7,9 +7,6 @@ import br.com.gom.webframework.annotations.httpmethods.WebFrameworkDeleteMethod;
 import br.com.gom.webframework.annotations.httpmethods.WebFrameworkGetMethod;
 import br.com.gom.webframework.annotations.httpmethods.WebFrameworkPostMethod;
 import br.com.gom.webframework.annotations.httpmethods.WebFrameworkPutMethod;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 
 
 /**
@@ -28,8 +25,6 @@ import lombok.Getter;
  * @see WebFrameworkPutMethod
  * @see WebFrameworkDeleteMethod
  */
-@Getter
-@AllArgsConstructor( access=AccessLevel.PRIVATE )
 public enum HTTP_METHOD_ENUM{
 
     /**
@@ -58,6 +53,14 @@ public enum HTTP_METHOD_ENUM{
      * @see WebFrameworkDeleteMethod
      */
     private Class<? extends Annotation> classAnnotation;
+
+    private HTTP_METHOD_ENUM(final Class<? extends Annotation> classAnnotation){
+        this.classAnnotation = classAnnotation;
+    }
+
+    public Class<? extends Annotation> getClassAnnotation(){
+        return this.classAnnotation;
+    }
 
     /**
      * Diz se a anotação vinculada ao enum do método HTTP é {@link WebFrameworkGetMethod @WebFrameworkGetMethod}.

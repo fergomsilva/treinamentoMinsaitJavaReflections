@@ -34,63 +34,33 @@ public class HelloController{
 
     @WebFrameworkGetMethod( "/produto/lista" )
     public List<Produto> listarProdutos(){
-        return Arrays.asList( Produto.builder()
-            .id( 1l )
-            .nome( "Nome1" )
-            .valor( 2000.0 )
-            .linkFoto( "teste.jpg" )
-        .build() );
+        return Arrays.asList( new Produto( 1l, "Nome1", 2000.0, "teste.jpg" ) );
     }
 
     @WebFrameworkGetMethod( "/produto/{id}" )
     public Produto exibirProduto(final @WebFrameworkPathVariable( "id" ) Long idProduto){
-        return Produto.builder()
-            .id( idProduto )
-            .nome( "Nome" + idProduto )
-            .valor( 2000.0 )
-            .linkFoto( "teste.jpg" )
-        .build();
+        return new Produto( idProduto, ( "Nome" + idProduto ), 2000.0, "teste.jpg" );
     }
 
     @WebFrameworkGetMethod( "/produto" )
     public Produto exibirProduto2(final @WebFrameworkRequestParam( "idProduto" ) Long idProduto){
-        return Produto.builder()
-            .id( idProduto )
-            .nome( "Nome" + idProduto )
-            .valor( 2000.0 )
-            .linkFoto( "teste.jpg" )
-        .build();
+        return new Produto( idProduto, ( "Nome" + idProduto ), 2000.0, "teste.jpg" );
     }
 
     @WebFrameworkGetMethod( "/produto/lista/filtro" )
     public List<Produto> exibirProduto2(final @WebFrameworkRequestParam( "nome" ) String filtroNome){
-        return Arrays.asList( Produto.builder()
-            .id( 1l )
-            .nome( filtroNome )
-            .valor( 2000.0 )
-            .linkFoto( "teste.jpg" )
-        .build() );
+        return Arrays.asList( new Produto( 1l, filtroNome, 2000.0, "teste.jpg" ) );
     }
 
     @WebFrameworkPutMethod( "/produto/{id}/nome/{nomeProduto}" )
     public Produto atualizarNomeProduto(final @WebFrameworkPathVariable( "nomeProduto" ) String nomeProduto, 
     final @WebFrameworkPathVariable( "id" ) Long idProduto){
-        return Produto.builder()
-            .id( idProduto )
-            .nome( nomeProduto )
-            .valor( 2000.0 )
-            .linkFoto( "teste.jpg" )
-        .build();
+        return new Produto( idProduto, nomeProduto, 2000.0, "teste.jpg" );
     }
 
     @WebFrameworkDeleteMethod( "/produto/{id}" )
     public Produto deleteProduto(final @WebFrameworkPathVariable( "id" ) Long idProduto){
-        return Produto.builder()
-            .id( idProduto )
-            .nome( "Nome" + idProduto )
-            .valor( 2000.0 )
-            .linkFoto( "teste.jpg" )
-        .build();
+        return new Produto( idProduto, ( "Nome" + idProduto ), 2000.0, "teste.jpg" );
     }
 
     @WebFrameworkPostMethod( "/produto" )

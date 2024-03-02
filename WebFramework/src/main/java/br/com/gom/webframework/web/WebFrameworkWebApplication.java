@@ -6,13 +6,7 @@ import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.lang.reflect.Parameter;
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -23,13 +17,6 @@ import org.apache.catalina.startup.Tomcat;
 import br.com.gom.webframework.annotations.WebFrameworkController;
 import br.com.gom.webframework.annotations.WebFrameworkRepository;
 import br.com.gom.webframework.annotations.WebFrameworkService;
-import br.com.gom.webframework.annotations.datarequests.WebFrameworkBody;
-import br.com.gom.webframework.annotations.datarequests.WebFrameworkPathVariable;
-import br.com.gom.webframework.annotations.datarequests.WebFrameworkRequestParam;
-import br.com.gom.webframework.annotations.httpmethods.WebFrameworkDeleteMethod;
-import br.com.gom.webframework.annotations.httpmethods.WebFrameworkGetMethod;
-import br.com.gom.webframework.annotations.httpmethods.WebFrameworkPostMethod;
-import br.com.gom.webframework.annotations.httpmethods.WebFrameworkPutMethod;
 import br.com.gom.webframework.datastructures.InterfaceImplementationMap;
 import br.com.gom.webframework.datastructures.configs.WebFrameworkConfigMap;
 import br.com.gom.webframework.datastructures.controllers.ControllerMap;
@@ -39,6 +26,7 @@ import br.com.gom.webframework.datastructures.controllers.SplitUrlControllerData
 import br.com.gom.webframework.enumerations.HTTP_METHOD_ENUM;
 import br.com.gom.webframework.explorer.ClassExplorer;
 import br.com.gom.webframework.util.WebFrameworkLogger;
+import br.com.gom.webframework.util.WebFrameworkUtil;
 
 
 public class WebFrameworkWebApplication{
@@ -69,12 +57,12 @@ public class WebFrameworkWebApplication{
 
             final Tomcat tomcat = new Tomcat();
             final Connector connector = new Connector();
-            final int port = WebFrameworkConfigMap.port();
+            final int port = WebFrameworkConfigMap.port(); //pega a porta configurada ou padrão
             connector.setPort( port );
             tomcat.setConnector( connector );
             WebFrameworkLogger.log( LOG_MODULO, "Iniciando na porta %d.", port );
-            WebFrameworkLogger.log( LOG_MODULO, "Acesso disponivel a partir da URL: http://localhost:%s.", 
-                port );
+            WebFrameworkLogger.log( LOG_MODULO, 
+                "Acesso disponivel a partir da URL: http://localhost:%s.", port );
             
             // contexto olhando a raiz da aplicacao
             // procurando classes na raiz da app
@@ -130,8 +118,18 @@ public class WebFrameworkWebApplication{
         }
     }
 
+    /**
+     * Verifica a existencia de configurações passadas para o APP, e se existir memoriza em memória.<br>
+     * <p>
+     * A prioridade é a properties 'webframework-config.properties' e depois as variaveis de ambiente 
+     * começadas com 'WEBFRAMEWORK_'.
+     * </p>
+     * @param sourceClass classe principal do APP
+     * @throws IOException erro na leitura do properties
+     */
     private static void findConfig(final Class<?> sourceClass) throws IOException{
         WebFrameworkLogger.log( LOG_MODULO_CONFIG, "Procurando pelo properties 'webframework-config'." );
+        // tenta encontrar a properties 'webframework-config.properties'
         try( final InputStream streamProperties = sourceClass.getClassLoader().getResourceAsStream( "webframework-config.properties" ) ){
             if( streamProperties != null ){
                 final Properties prop = new Properties();
@@ -139,6 +137,7 @@ public class WebFrameworkWebApplication{
                 if( !prop.isEmpty() ){
                     WebFrameworkLogger.log( LOG_MODULO_CONFIG, "Carregando as propriedades do properties." );
                     final AtomicInteger count = new AtomicInteger( 0 );
+                    // carrega todas as propriedades do arquivo em memória
                     prop.entrySet().stream().forEach( config -> {
                         count.incrementAndGet();
                         WebFrameworkConfigMap.put( config.getKey().toString(), config.getValue().toString() );
@@ -148,11 +147,13 @@ public class WebFrameworkWebApplication{
                 }
             }
         }
+        // tenta encontrar variaveis de ambiente iniciadas com 'WEBFRAMEWORK_'
         WebFrameworkLogger.log( LOG_MODULO_CONFIG, "Procurando por variveis de ambiente." );
         final AtomicInteger count = new AtomicInteger( 0 );
         System.getenv().entrySet().stream()
             .filter( env -> env.getKey().startsWith( "WEBFRAMEWORK_" ) 
                 && !WebFrameworkConfigMap.hasKey( env.getKey() ) )
+                // filtra todas as variaveis de ambiente para carregar apenas as que não existem na properties
             .forEach( env -> {
                 count.incrementAndGet();
                 WebFrameworkConfigMap.put( env.getKey(), env.getValue() );
@@ -168,121 +169,31 @@ public class WebFrameworkWebApplication{
             if( Modifier.PUBLIC == method.getModifiers() ){
                 //LOG_MODULO_METADATA
                 for( Annotation annotation : method.getAnnotations() ){
-                    final RequestControllerData data = RequestControllerData.builder()
-                        .httpMethod( HTTP_METHOD_ENUM.valueOfByAnnotation( annotation ) )
-                        .url( getUrlValueFromAnnotation( annotation ) )
-                        .controllerClass( classNameController )
-                        .controllerMethod( method.getName() )
-                    .build();
+                    final RequestControllerData data = new RequestControllerData();
+                    data.setHttpMethod( HTTP_METHOD_ENUM.valueOfByAnnotation( annotation ) );
+                    data.setUrl( WebFrameworkUtil.getUrlValueFromAnnotation( annotation ) );
+                    data.setControllerClass( classNameController );
+                    data.setControllerMethod( method.getName() );
                     
-                    data.setMethodParameters( extractParametersFromMethod( method ) );
-                    data.hasBodyParameterAnnotation( data.getMethodParameters().stream()
+                    // extrai os parametros do método da controller
+                    data.setMethodParameters( WebFrameworkUtil.extractParametersFromMethod( method ) );
+                    // marca se existe algum parametro com a primeira anotação de body
+                    data.setHasBodyParameterAnnotation( data.getMethodParameters().stream()
                         .anyMatch( ParameterMethodControllerData::isBodyParameterAnnotation ) );
-                    data.hasRequestParamAnnotation( data.getMethodParameters().stream()
+                    // marca se existe algum parametro com a primeira anotação de query param
+                    data.setHasRequestParamAnnotation( data.getMethodParameters().stream()
                         .anyMatch( ParameterMethodControllerData::isRequestParameterAnnotation ) );
                     
-                    data.setUrlSplits( extractUrlSplits( data.getUrl(), data.getMethodParameters() ) );
+                    // extrai as 'partes' da URI configurada no método
+                    data.setUrlSplits( WebFrameworkUtil.extractUrlSplits( data.getUrl(), data.getMethodParameters() ) );
+                    // marca se a URI não possui variaveis
                     data.setStaticUrl( data.getUrlSplits().stream().noneMatch( SplitUrlControllerData::isParameter ) );
-                    if( !data.isStaticUrl() )
-                        data.setUrlRegex( generateUrlRegex( data.getUrlSplits() ) );
+                    if( !data.isStaticUrl() ) // se a URI tem variável altera a URI para regex
+                        data.setUrlRegex( WebFrameworkUtil.generateUrlRegex( data.getUrlSplits() ) );
                     ControllerMap.put( data );
                 }
             }
         }
-    }
-
-    private static List<SplitUrlControllerData> extractUrlSplits(final String url, 
-    final List<ParameterMethodControllerData> parametersMethod){
-        if( url.length() == 1 )
-            return Arrays.asList( SplitUrlControllerData.builder().path( "" ).build() );
-        final List<SplitUrlControllerData> splitsData = new ArrayList<>();
-        Arrays.stream( url.substring( 1 ).split( "/" ) )
-            .forEach( path -> {
-                final SplitUrlControllerData data = SplitUrlControllerData.builder()
-                    .path( path.replaceAll( "[{}]", "" ) )
-                .build();
-                if( path.matches( "^[{]\\S*[}]$" ) ){
-                    final int indexParam = parametersMethod.indexOf( ParameterMethodControllerData.builder().paramName( data.getPath() ).build() );
-                    if( indexParam > -1 )
-                        data.setParamClassFromMethod( parametersMethod.get( indexParam ).getParamClass() );
-                }
-                splitsData.add( data );
-            } );
-        return splitsData;
-    }
-
-    private static String generateUrlRegex(final List<SplitUrlControllerData> urlSplits){
-        final String regex = String.join( "/", urlSplits.stream().map( item -> {
-            if( !item.isParameter() )
-                return item.getPath();
-            else{
-                if( Number.class.isAssignableFrom( item.getParamClassFromMethod().getSuperclass() ) ){
-                    if( Double.class.isAssignableFrom( item.getParamClassFromMethod() ) 
-                        || Float.class.isAssignableFrom( item.getParamClassFromMethod() ) 
-                        || BigDecimal.class.isAssignableFrom( item.getParamClassFromMethod() ) )
-                        return "[-.0-9]*";
-                    return "\\d*";
-                }/*else if( String.class.isAssignableFrom( item.getParamClassFromMethod() ) 
-                    || StringBuffer.class.isAssignableFrom( item.getParamClassFromMethod() ) 
-                    || StringBuilder.class.isAssignableFrom( item.getParamClassFromMethod() ) )
-                    return "\\w*";*/
-                return "\\S*";
-            }
-        } ).toList() );
-        return "^/" + regex + " $";
-    }
-
-    private static List<ParameterMethodControllerData> extractParametersFromMethod(final Method method){
-        final List<ParameterMethodControllerData> parametersData = new ArrayList<>();
-        for( Parameter parameter : method.getParameters() ){
-            Arrays.stream( parameter.getAnnotations() )
-                .filter( item -> item.annotationType().isAssignableFrom( WebFrameworkBody.class )
-                    || item.annotationType().isAssignableFrom( WebFrameworkPathVariable.class )
-                    || item.annotationType().isAssignableFrom( WebFrameworkRequestParam.class ) )
-                .findFirst()
-                .ifPresentOrElse( 
-                    ann -> 
-                        parametersData.add( ParameterMethodControllerData.builder()
-                            .paramClass( parameter.getType() )
-                            .paramAnnotation( ann )
-                            .paramName( getNameParameterFromAnnotation( ann ) )
-                        .build() ), 
-                    () -> 
-                        parametersData.add( ParameterMethodControllerData.builder()
-                            .paramClass( parameter.getType() )
-                        .build() )
-                );
-        }
-        return Collections.unmodifiableList( parametersData );
-    }
-
-    private static String getUrlValueFromAnnotation(final Annotation annotation){
-        String url = null;
-        final Optional<HTTP_METHOD_ENUM> httpMethod = Optional.ofNullable( 
-            HTTP_METHOD_ENUM.valueOfByAnnotation( annotation ) );
-        if( httpMethod.isPresent() ){
-            if( httpMethod.get().isGet() )
-                url = ( (WebFrameworkGetMethod)annotation ).value();
-            else if( httpMethod.get().isPost() )
-                url = ( (WebFrameworkPostMethod)annotation ).value();
-            else if( httpMethod.get().isPut() )
-                url = ( (WebFrameworkPutMethod)annotation ).value();
-            else if( httpMethod.get().isDelete() )
-                url = ( (WebFrameworkDeleteMethod)annotation ).value();
-            if( url != null && !url.startsWith( "/" ) )
-                url = "/" + url;
-        }
-        return url;
-    }
-
-    private static String getNameParameterFromAnnotation(final Annotation annotation){
-        if( annotation != null ){
-            if( annotation.annotationType().isAssignableFrom( WebFrameworkPathVariable.class ) )
-                return ( (WebFrameworkPathVariable)annotation ).value();
-            else if( annotation.annotationType().isAssignableFrom( WebFrameworkRequestParam.class ) )
-                return ( (WebFrameworkRequestParam)annotation ).value();
-        }
-        return null;
     }
 
 }
