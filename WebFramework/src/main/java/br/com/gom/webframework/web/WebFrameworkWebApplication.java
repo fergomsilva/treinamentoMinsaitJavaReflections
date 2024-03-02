@@ -24,8 +24,8 @@ import br.com.gom.webframework.annotations.WebFrameworkController;
 import br.com.gom.webframework.annotations.WebFrameworkRepository;
 import br.com.gom.webframework.annotations.WebFrameworkService;
 import br.com.gom.webframework.annotations.datarequests.WebFrameworkBody;
-import br.com.gom.webframework.annotations.datarequests.WebFrameworkPathParameter;
-import br.com.gom.webframework.annotations.datarequests.WebFrameworkRequestParameter;
+import br.com.gom.webframework.annotations.datarequests.WebFrameworkPathVariable;
+import br.com.gom.webframework.annotations.datarequests.WebFrameworkRequestParam;
 import br.com.gom.webframework.annotations.httpmethods.WebFrameworkDeleteMethod;
 import br.com.gom.webframework.annotations.httpmethods.WebFrameworkGetMethod;
 import br.com.gom.webframework.annotations.httpmethods.WebFrameworkPostMethod;
@@ -178,7 +178,7 @@ public class WebFrameworkWebApplication{
                     data.setMethodParameters( extractParametersFromMethod( method ) );
                     data.hasBodyParameterAnnotation( data.getMethodParameters().stream()
                         .anyMatch( ParameterMethodControllerData::isBodyParameterAnnotation ) );
-                    data.hasRequestParameterAnnotation( data.getMethodParameters().stream()
+                    data.hasRequestParamAnnotation( data.getMethodParameters().stream()
                         .anyMatch( ParameterMethodControllerData::isRequestParameterAnnotation ) );
                     
                     data.setUrlSplits( extractUrlSplits( data.getUrl(), data.getMethodParameters() ) );
@@ -203,10 +203,8 @@ public class WebFrameworkWebApplication{
                 .build();
                 if( path.matches( "^[{]\\S*[}]$" ) ){
                     final int indexParam = parametersMethod.indexOf( ParameterMethodControllerData.builder().paramName( data.getPath() ).build() );
-                    if( indexParam > -1 ){
+                    if( indexParam > -1 )
                         data.setParamClassFromMethod( parametersMethod.get( indexParam ).getParamClass() );
-                        data.setIndexParameterMethod( indexParam );
-                    }
                 }
                 splitsData.add( data );
             } );
@@ -239,8 +237,8 @@ public class WebFrameworkWebApplication{
         for( Parameter parameter : method.getParameters() ){
             Arrays.stream( parameter.getAnnotations() )
                 .filter( item -> item.annotationType().isAssignableFrom( WebFrameworkBody.class )
-                    || item.annotationType().isAssignableFrom( WebFrameworkPathParameter.class )
-                    || item.annotationType().isAssignableFrom( WebFrameworkRequestParameter.class ) )
+                    || item.annotationType().isAssignableFrom( WebFrameworkPathVariable.class )
+                    || item.annotationType().isAssignableFrom( WebFrameworkRequestParam.class ) )
                 .findFirst()
                 .ifPresentOrElse( 
                     ann -> 
@@ -279,10 +277,10 @@ public class WebFrameworkWebApplication{
 
     private static String getNameParameterFromAnnotation(final Annotation annotation){
         if( annotation != null ){
-            if( annotation.annotationType().isAssignableFrom( WebFrameworkPathParameter.class ) )
-                return ( (WebFrameworkPathParameter)annotation ).value();
-            else if( annotation.annotationType().isAssignableFrom( WebFrameworkRequestParameter.class ) )
-                return ( (WebFrameworkRequestParameter)annotation ).value();
+            if( annotation.annotationType().isAssignableFrom( WebFrameworkPathVariable.class ) )
+                return ( (WebFrameworkPathVariable)annotation ).value();
+            else if( annotation.annotationType().isAssignableFrom( WebFrameworkRequestParam.class ) )
+                return ( (WebFrameworkRequestParam)annotation ).value();
         }
         return null;
     }

@@ -8,8 +8,8 @@ import br.com.gom.mywebtestframework.service.IService;
 import br.com.gom.webframework.annotations.WebFrameworkController;
 import br.com.gom.webframework.annotations.WebFrameworkInject;
 import br.com.gom.webframework.annotations.datarequests.WebFrameworkBody;
-import br.com.gom.webframework.annotations.datarequests.WebFrameworkPathParameter;
-import br.com.gom.webframework.annotations.datarequests.WebFrameworkRequestParameter;
+import br.com.gom.webframework.annotations.datarequests.WebFrameworkPathVariable;
+import br.com.gom.webframework.annotations.datarequests.WebFrameworkRequestParam;
 import br.com.gom.webframework.annotations.httpmethods.WebFrameworkDeleteMethod;
 import br.com.gom.webframework.annotations.httpmethods.WebFrameworkGetMethod;
 import br.com.gom.webframework.annotations.httpmethods.WebFrameworkPostMethod;
@@ -43,7 +43,7 @@ public class HelloController{
     }
 
     @WebFrameworkGetMethod( "/produto/{id}" )
-    public Produto exibirProduto(final @WebFrameworkPathParameter( "id" ) Long idProduto){
+    public Produto exibirProduto(final @WebFrameworkPathVariable( "id" ) Long idProduto){
         return Produto.builder()
             .id( idProduto )
             .nome( "Nome" + idProduto )
@@ -53,7 +53,7 @@ public class HelloController{
     }
 
     @WebFrameworkGetMethod( "/produto" )
-    public Produto exibirProduto2(final @WebFrameworkRequestParameter( "idProduto" ) Long idProduto){
+    public Produto exibirProduto2(final @WebFrameworkRequestParam( "idProduto" ) Long idProduto){
         return Produto.builder()
             .id( idProduto )
             .nome( "Nome" + idProduto )
@@ -63,7 +63,7 @@ public class HelloController{
     }
 
     @WebFrameworkGetMethod( "/produto/lista/filtro" )
-    public List<Produto> exibirProduto2(final @WebFrameworkRequestParameter( "nome" ) String filtroNome){
+    public List<Produto> exibirProduto2(final @WebFrameworkRequestParam( "nome" ) String filtroNome){
         return Arrays.asList( Produto.builder()
             .id( 1l )
             .nome( filtroNome )
@@ -73,8 +73,8 @@ public class HelloController{
     }
 
     @WebFrameworkPutMethod( "/produto/{id}/nome/{nomeProduto}" )
-    public Produto atualizarNomeProduto(final @WebFrameworkPathParameter( "nomeProduto" ) String nomeProduto, 
-    final @WebFrameworkPathParameter( "id" ) Long idProduto){
+    public Produto atualizarNomeProduto(final @WebFrameworkPathVariable( "nomeProduto" ) String nomeProduto, 
+    final @WebFrameworkPathVariable( "id" ) Long idProduto){
         return Produto.builder()
             .id( idProduto )
             .nome( nomeProduto )
@@ -84,7 +84,7 @@ public class HelloController{
     }
 
     @WebFrameworkDeleteMethod( "/produto/{id}" )
-    public Produto deleteProduto(final @WebFrameworkPathParameter( "id" ) Long idProduto){
+    public Produto deleteProduto(final @WebFrameworkPathVariable( "id" ) Long idProduto){
         return Produto.builder()
             .id( idProduto )
             .nome( "Nome" + idProduto )

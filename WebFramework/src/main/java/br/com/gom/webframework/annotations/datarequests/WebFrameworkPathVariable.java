@@ -8,8 +8,11 @@ import java.lang.annotation.Target;
 
 @Retention( RetentionPolicy.RUNTIME )
 @Target( ElementType.PARAMETER )
-public @interface WebFrameworkPathParameter{
+public @interface WebFrameworkPathVariable{
     
+    /**
+     * @return nome da variavel na URL da requisição.
+     */
     String value();
     
 }

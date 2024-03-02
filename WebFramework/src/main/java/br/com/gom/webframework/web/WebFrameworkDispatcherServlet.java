@@ -18,8 +18,8 @@ import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 
 import br.com.gom.webframework.annotations.datarequests.WebFrameworkBody;
-import br.com.gom.webframework.annotations.datarequests.WebFrameworkPathParameter;
-import br.com.gom.webframework.annotations.datarequests.WebFrameworkRequestParameter;
+import br.com.gom.webframework.annotations.datarequests.WebFrameworkPathVariable;
+import br.com.gom.webframework.annotations.datarequests.WebFrameworkRequestParam;
 import br.com.gom.webframework.datastructures.InterfaceImplementationMap;
 import br.com.gom.webframework.datastructures.controllers.ControllerInstance;
 import br.com.gom.webframework.datastructures.controllers.ControllerMap;
@@ -120,9 +120,9 @@ public class WebFrameworkDispatcherServlet extends HttpServlet{
             if( paramMethodData.getParamAnnotation().annotationType().isAssignableFrom( WebFrameworkBody.class ) )
                 valuesToMethod[ index.getAndIncrement() ] = GSON.fromJson( this.readBytesFromRequest( req ), 
                     paramMethodData.getParamClass() );
-            else if( paramMethodData.getParamAnnotation().annotationType().isAssignableFrom( WebFrameworkPathParameter.class ) )
+            else if( paramMethodData.getParamAnnotation().annotationType().isAssignableFrom( WebFrameworkPathVariable.class ) )
                 valuesToMethod[ index.getAndIncrement() ] = mapaValores.get( paramMethodData.getParamName() );
-            else if( paramMethodData.getParamAnnotation().annotationType().isAssignableFrom( WebFrameworkRequestParameter.class ) )
+            else if( paramMethodData.getParamAnnotation().annotationType().isAssignableFrom( WebFrameworkRequestParam.class ) )
                 valuesToMethod[ index.getAndIncrement() ] = mapaValores.get( "query-" + paramMethodData.getParamName() );
             else
                 valuesToMethod[ index.getAndIncrement() ] = null;
@@ -210,7 +210,7 @@ public class WebFrameworkDispatcherServlet extends HttpServlet{
                         item.getParamClassFromMethod() ) );
             } );
         }
-        if( data.hasRequestParameterAnnotation() && queryParameters != null && !queryParameters.isEmpty() ){
+        if( data.hasRequestParamAnnotation() && queryParameters != null && !queryParameters.isEmpty() ){
             data.getMethodParameters().stream()
                 .filter( item -> item.isRequestParameterAnnotation() && queryParameters.containsKey( item.getParamName() ) )
                 .forEach( item -> {

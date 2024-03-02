@@ -7,8 +7,8 @@ import br.com.gom.mywebtestframework.service.IAgendaService;
 import br.com.gom.webframework.annotations.WebFrameworkController;
 import br.com.gom.webframework.annotations.WebFrameworkInject;
 import br.com.gom.webframework.annotations.datarequests.WebFrameworkBody;
-import br.com.gom.webframework.annotations.datarequests.WebFrameworkPathParameter;
-import br.com.gom.webframework.annotations.datarequests.WebFrameworkRequestParameter;
+import br.com.gom.webframework.annotations.datarequests.WebFrameworkPathVariable;
+import br.com.gom.webframework.annotations.datarequests.WebFrameworkRequestParam;
 import br.com.gom.webframework.annotations.httpmethods.WebFrameworkDeleteMethod;
 import br.com.gom.webframework.annotations.httpmethods.WebFrameworkGetMethod;
 import br.com.gom.webframework.annotations.httpmethods.WebFrameworkPostMethod;
@@ -28,13 +28,13 @@ public class AgendaController{
     }
 
     @WebFrameworkGetMethod( "/agenda/listar/{dia}" )
-    public List<Agendamento> listarPorDia(final @WebFrameworkPathParameter( "dia" ) String data){
+    public List<Agendamento> listarPorDia(final @WebFrameworkPathVariable( "dia" ) String data){
         return this.service.listarPorDia( data );
     }
 
     @WebFrameworkGetMethod( "/agenda" )
-    public Agendamento obter(final @WebFrameworkRequestParameter( "dia" ) String data, 
-    final @WebFrameworkRequestParameter( "hora" ) String hora) throws Exception{
+    public Agendamento obter(final @WebFrameworkRequestParam( "dia" ) String data, 
+    final @WebFrameworkRequestParam( "hora" ) String hora) throws Exception{
         return this.service.obter( data, hora ).orElseGet( ()->null );
     }
 
@@ -49,8 +49,8 @@ public class AgendaController{
     }
 
     @WebFrameworkDeleteMethod( "/agenda" )
-    public void excluir(final @WebFrameworkRequestParameter( "dia" ) String data, 
-    final @WebFrameworkRequestParameter( "hora" ) String hora) throws Exception{
+    public void excluir(final @WebFrameworkRequestParam( "dia" ) String data, 
+    final @WebFrameworkRequestParam( "hora" ) String hora) throws Exception{
         this.service.excluir( data, hora );
     }
 

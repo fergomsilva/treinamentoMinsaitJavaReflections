@@ -3,6 +3,10 @@ package br.com.gom.webframework.util;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
+
+/**
+ * Classe utilitaria para geração de log no console.
+ */
 public class WebFrameworkLogger{
 
     private WebFrameworkLogger(){
@@ -23,6 +27,9 @@ public class WebFrameworkLogger{
     private static final String TXT_LOG_ERROR = VERDE + "%15s" + AMARELO 
         + " %-30s: " + VERMELHO + "[ERROR] %s " + RESET;
 
+    /**
+     * Apresenta o banner 'WebFramework' no console.
+     */
     @SuppressWarnings( { "all" } )
     public static void showBanner(){
         System.out.printf( VERDE ).println( " _       __     __    ______                                             __  " );
@@ -34,6 +41,12 @@ public class WebFrameworkLogger{
         System.out.print( RESET );
     }
 
+    /**
+     * Loga uma mensagem no console nas cores padrão.
+     * @param modulo nome do modulo da mensagem.
+     * @param mensagem mensagem para apresentar no console, pode possuir argumentos.
+     * @param params valores dos argumentos da mensagem.
+     */
     @SuppressWarnings( { "all" } )
     public static void log(final String modulo, final String mensagem, final Object... params){
         if( params == null || params.length == 0 )
@@ -44,6 +57,12 @@ public class WebFrameworkLogger{
                 modulo, String.format( mensagem, params ) ).println();
     }
 
+    /**
+     * Loga uma mensagem de ERRO no console com a cor vermelho.
+     * @param modulo nome do modulo da mensagem.
+     * @param mensagem mensagem para apresentar no console, pode possuir argumentos.
+     * @param params valores dos argumentos da mensagem.
+     */
     @SuppressWarnings( { "all" } )
     public static void error(final String modulo, final String mensagem, final Object... params){
         if( params == null || params.length == 0 )
@@ -54,6 +73,13 @@ public class WebFrameworkLogger{
                 modulo, String.format( mensagem, params ) ).println();
     }
 
+    /**
+     * Loga uma mensagem de ERRO no console com a cor vermelho e 'printa' o stack track de uma exceção fornecida.
+     * @param modulo nome do modulo da mensagem.
+     * @param e exceção de erro.
+     * @param mensagem mensagem para apresentar no console, pode possuir argumentos.
+     * @param params valores dos argumentos da mensagem.
+     */
     @SuppressWarnings( { "all" } )
     public static void error(final String modulo, final Exception e, final String mensagem, 
     final Object... params){

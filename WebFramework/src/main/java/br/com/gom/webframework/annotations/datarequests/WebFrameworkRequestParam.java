@@ -8,8 +8,11 @@ import java.lang.annotation.Target;
 
 @Retention( RetentionPolicy.RUNTIME )
 @Target( ElementType.PARAMETER )
-public @interface WebFrameworkRequestParameter{
+public @interface WebFrameworkRequestParam{
     
+    /**
+     * @return nome do query parameter informado após a URL da requisição.
+     */
     String value();
 
 }
