@@ -12,10 +12,12 @@ import org.apache.catalina.startup.Tomcat;
 import br.com.gom.webframework.annotations.WebFrameworkGetMethod;
 import br.com.gom.webframework.annotations.WebFrameworkPostMethod;
 import br.com.gom.webframework.datastructures.ControllerMap;
+import br.com.gom.webframework.datastructures.MethodParam;
 import br.com.gom.webframework.datastructures.RequestControllerData;
 import br.com.gom.webframework.datastructures.ServiceImplementationMap;
 import br.com.gom.webframework.explorer.ClassExplorer;
 import br.com.gom.webframework.util.WebFrameworkLogger;
+import br.com.gom.webframework.util.WebFrameworkUtil;
 
 
 public class WebFrameworkWebApplication{
@@ -98,18 +100,39 @@ public class WebFrameworkWebApplication{
     private static void  extractMethods(final String className) throws Exception{
         String path = "";
         String httpMethod = "";
+        String parameter = "";
 
         // recuperar todos os métodos da classe
         for( Method method : Class.forName( className ).getDeclaredMethods() ){
+            parameter = "";
             for( Annotation annotation : method.getAnnotations() ){
                 if( annotation.annotationType().getName().equals( "br.com.gom.webframework.annotations.WebFrameworkGetMethod" ) ){
                     httpMethod = "GET";
                     path = ( (WebFrameworkGetMethod)annotation ).value();
+
+                    // verificar se existe parametro no path
+                    final MethodParam methodParam = WebFrameworkUtil.convertUri2MethodParam( path );
+                    if( methodParam != null ){
+                        path = methodParam.getMethod();
+                        if( methodParam.getParam() != null )
+                            parameter = methodParam.getParam();
+                    }
                 }else if( annotation.annotationType().getName().equals( "br.com.gom.webframework.annotations.WebFrameworkPostMethod" ) ){
                     httpMethod = "POST";
                     path = ( (WebFrameworkPostMethod)annotation ).value();
+                    // verificar se existe parametro no path
+                    final MethodParam methodParam = WebFrameworkUtil.convertUri2MethodParam( path );
+                    if( methodParam != null ){
+                        path = methodParam.getMethod();
+                        if( methodParam.getParam() != null )
+                            parameter = methodParam.getParam();
+                    }
                 }
-                RequestControllerData getData = new RequestControllerData( httpMethod, path, className, method.getName() );
+                final RequestControllerData getData = RequestControllerData.builder()
+                    .httpMethod( httpMethod ).url( path ).controllerClass( className )
+                    .controllerMethod( method.getName() )
+                    .parameter( parameter )
+                .build();
                 ControllerMap.values.put( ( httpMethod + path ), getData );
             }
         }

@@ -8,19 +8,22 @@ import lombok.NoArgsConstructor;
 
 @Data
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 public class RequestControllerData{
     
     private String httpMethod;
     private String url;
     private String controllerClass;
     private String controllerMethod;
+    private @Builder.Default String parameter = "";
 
     @Override
     public String toString(){
-        return String.format( "    %s:%s [%s.%s]", this.getHttpMethod(), this.getUrl(), 
-            this.getControllerClass(), this.getControllerMethod() );
+        return String.format( "    %s:%s [%s.%s]%s", this.getHttpMethod(), this.getUrl(), 
+            this.getControllerClass(), this.getControllerMethod(), 
+            ( !this.getParameter().isEmpty() ? ( " - Expected parameter " + this.getParameter() ) 
+                : "" ) );
     }
 
 }

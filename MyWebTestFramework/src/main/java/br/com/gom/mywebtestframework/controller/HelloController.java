@@ -6,6 +6,7 @@ import br.com.gom.webframework.annotations.WebFrameworkBody;
 import br.com.gom.webframework.annotations.WebFrameworkController;
 import br.com.gom.webframework.annotations.WebFrameworkGetMethod;
 import br.com.gom.webframework.annotations.WebFrameworkInject;
+import br.com.gom.webframework.annotations.WebFrameworkPathVariable;
 import br.com.gom.webframework.annotations.WebFrameworkPostMethod;
 
 
@@ -51,11 +52,10 @@ public class HelloController{
         return this.iservice.chamadaCustom( "Hello injected" );
     }
 
-    //PathParameter
-        //PUT
-        //DELeTE
-        //GET
-    //RequestParameter
+    //http://localhost:8080/retornavalor/22222 == Retornando o valor de parametro: 22222
+    @WebFrameworkGetMethod( "/retornavalor/{valor}" )
+    public String retornoValor(final @WebFrameworkPathVariable String valor){
+        return "Retornando o valor de parametro: " + valor;
+    }
 
-    //Injecao de dependencias em cadeia
 }
