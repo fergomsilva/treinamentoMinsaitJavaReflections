@@ -57,7 +57,7 @@ public class SplitUrlControllerData{
             return true;
         if( obj == null )
             return false;
-        if( this.getClass() == obj.getClass() )
+        if( this.getClass() != obj.getClass() )
             return false;
         final SplitUrlControllerData other = (SplitUrlControllerData)obj;
         return ( this.getPath().equals( other.getPath() ) );

@@ -88,7 +88,7 @@ public class Agendamento implements Comparable<Agendamento>, Comparator<Agendame
             return true;
         if( obj == null )
             return false;
-        if( this.getClass() == obj.getClass() )
+        if( this.getClass() != obj.getClass() )
             return false;
         final Agendamento other = (Agendamento)obj;
         return ( this.getData().equals( other.getData() ) ) 

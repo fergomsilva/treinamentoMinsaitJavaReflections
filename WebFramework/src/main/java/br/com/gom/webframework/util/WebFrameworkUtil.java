@@ -27,6 +27,20 @@ import br.com.gom.webframework.enumerations.HTTP_METHOD_ENUM;
  */
 public final class WebFrameworkUtil{
 
+    /**
+     * tipos primitivos numericos inteiros
+     */
+    private static final String INTEGER_PRIMITIVE_CLASSES = "byte|short|int|long";
+    /**
+     * tipos primitivos numericos decimais
+     */
+    private static final String DECIMAL_PRIMITIVE_CLASSES = "float|double";
+    /**
+     * tipos primitivos numericios inteiros e decimais
+     */
+    private static final String PRIMITIVE_CLASSES = INTEGER_PRIMITIVE_CLASSES + "|" + DECIMAL_PRIMITIVE_CLASSES;
+
+
     private WebFrameworkUtil(){
         super();
     }
@@ -107,9 +121,54 @@ public final class WebFrameworkUtil{
     }
 
     /**
-     * 
-     * @param urlSplits
-     * @return
+     * Diz se a classe corresponde algum tipo de número, inteiro ou decimal.
+     * @param type classe para verificar se é de algum tipo numerico.
+     * @return <b>true</b> se a classe é numerica
+     */
+    private static final boolean isNumericClass(final Class<?> type){
+        if( type.isPrimitive() )
+            return PRIMITIVE_CLASSES.contains( type.getName() );
+        return ( type.getSuperclass() != null && Number.class.isAssignableFrom( type.getSuperclass() ) )
+            || BigInteger.class.isAssignableFrom( type ) || BigDecimal.class.isAssignableFrom( type );
+    }
+
+    /**
+     * Diz se a classe corresponde algum tipo de número inteiro.
+     * @param type classe para verificar se é de algum tipo numerico inteiro.
+     * @return <b>true</b> se a classe é numerica e de algum tipo inteiro
+     */
+    private static final boolean isIntegerClass(final Class<?> type){
+        if( type.isPrimitive() )
+            return INTEGER_PRIMITIVE_CLASSES.contains( type.getName() );
+        if( ( type.getSuperclass() != null && Number.class.isAssignableFrom( type.getSuperclass() ) ) 
+                || BigInteger.class.isAssignableFrom( type ) ){
+            return Byte.class.isAssignableFrom( type ) || Short.class.isAssignableFrom( type ) 
+                || Integer.class.isAssignableFrom( type ) || Long.class.isAssignableFrom( type ) 
+                || BigInteger.class.isAssignableFrom( type );
+        }
+        return false;
+    }
+
+    /**
+     * Diz se a classe corresponde algum tipo de número decimal.
+     * @param type classe para verificar se é de algum tipo numerico decimal.
+     * @return <b>true</b> se a classe é numerica e de algum tipo decimal
+     */
+    private static final boolean isDecimalClass(final Class<?> type){
+        if( type.isPrimitive() )
+            return DECIMAL_PRIMITIVE_CLASSES.contains( type.getName() );
+        if( ( type.getSuperclass() != null && Number.class.isAssignableFrom( type.getSuperclass() ) ) 
+                || BigDecimal.class.isAssignableFrom( type ) ){
+            return Float.class.isAssignableFrom( type ) || Double.class.isAssignableFrom( type ) 
+                || BigDecimal.class.isAssignableFrom( type );
+        }
+        return false;
+    }
+
+    /**
+     * Gera a URI com regex nas 'partes' que são variáveis.
+     * @param urlSplits 'partes' da URI configuração na requisição do método na controller.
+     * @return URI com regex nas 'partes' que são variáveis
      */
     public static final String generateUrlRegex(final List<SplitUrlControllerData> urlSplits){
         // percorre todas as 'partes' e converte para regex as que são variáveis
@@ -117,15 +176,14 @@ public final class WebFrameworkUtil{
             if( !item.isParameter() )
                 return item.getPath();
             else{
-                if( Number.class.isAssignableFrom( item.getParamClassFromMethod().getSuperclass() ) ){
-                    if( Double.class.isAssignableFrom( item.getParamClassFromMethod() ) 
-                        || Float.class.isAssignableFrom( item.getParamClassFromMethod() ) 
-                        || BigDecimal.class.isAssignableFrom( item.getParamClassFromMethod() ) ){
+                // verifica se a classe e numerica
+                if( isNumericClass( item.getParamClassFromMethod() ) ){
+                    if( isDecimalClass( item.getParamClassFromMethod() ) )
                         // se a classe do parametro é decimal, considera este regex para a variável da URI
                         return "[-.0-9]*";
-                    }
-                    // se a classe do parametro é inteiro, considera este regex para a variável da URI
-                    return "\\d*";
+                    else if ( isIntegerClass( item.getParamClassFromMethod() ) )
+                        // se a classe do parametro é inteiro, considera este regex para a variável da URI
+                        return "\\d*";
                 }
                 // qualquer outra classe considera este regex para a variável da URI
                 return "\\S*";
@@ -147,6 +205,8 @@ public final class WebFrameworkUtil{
         if( value != null && isNumeric( value ) ){
             if( Byte.class.isAssignableFrom( valueClass ) || "byte".equals( valueClass.getName() ) )
                 return Byte.parseByte( value );
+            else if( Short.class.isAssignableFrom( valueClass ) || "short".equals( valueClass.getName() ) )
+                return Short.parseShort( value );
             else if( Integer.class.isAssignableFrom( valueClass ) || "int".equals( valueClass.getName() ) )
                 return Integer.parseInt( value );
             else if( Long.class.isAssignableFrom( valueClass ) || "long".equals( valueClass.getName() ) )

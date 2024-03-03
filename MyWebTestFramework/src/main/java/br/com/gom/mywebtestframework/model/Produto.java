@@ -56,7 +56,7 @@ public class Produto{
             return true;
         if( obj == null )
             return false;
-        if( this.getClass() == obj.getClass() )
+        if( this.getClass() != obj.getClass() )
             return false;
         final Produto other = (Produto)obj;
         return ( this.getId() == other.getId() );

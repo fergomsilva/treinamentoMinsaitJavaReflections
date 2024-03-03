@@ -138,7 +138,7 @@ public class RequestControllerData{
             return true;
         if( obj == null )
             return false;
-        if( this.getClass() == obj.getClass() )
+        if( this.getClass() != obj.getClass() )
             return false;
         final RequestControllerData other = (RequestControllerData)obj;
         return ( this.getHttpMethod() == other.getHttpMethod() ) 

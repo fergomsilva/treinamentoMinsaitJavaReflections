@@ -105,7 +105,7 @@ public class ParameterMethodControllerData{
             return true;
         if( obj == null )
             return false;
-        if( this.getClass() == obj.getClass() )
+        if( this.getClass() != obj.getClass() )
             return false;
         final ParameterMethodControllerData other = (ParameterMethodControllerData)obj;
         return ( this.getParamName().equals( other.getParamName() ) );
