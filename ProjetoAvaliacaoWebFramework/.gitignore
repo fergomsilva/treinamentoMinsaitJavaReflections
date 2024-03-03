@@ -1,0 +1,5 @@
+#diretories
+/target
+/.vscode
+/tomcat.8080
+/tomcat.*

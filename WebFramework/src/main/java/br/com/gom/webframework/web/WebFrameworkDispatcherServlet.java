@@ -7,26 +7,25 @@ import java.io.PrintWriter;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonSyntaxException;
 
 import br.com.gom.webframework.annotations.datarequests.WebFrameworkBody;
-import br.com.gom.webframework.annotations.datarequests.WebFrameworkPathParameter;
-import br.com.gom.webframework.annotations.datarequests.WebFrameworkRequestParameter;
+import br.com.gom.webframework.annotations.datarequests.WebFrameworkPathVariable;
+import br.com.gom.webframework.annotations.datarequests.WebFrameworkRequestParam;
 import br.com.gom.webframework.datastructures.InterfaceImplementationMap;
 import br.com.gom.webframework.datastructures.controllers.ControllerInstance;
 import br.com.gom.webframework.datastructures.controllers.ControllerMap;
 import br.com.gom.webframework.datastructures.controllers.ParameterMethodControllerData;
 import br.com.gom.webframework.datastructures.controllers.RequestControllerData;
+import br.com.gom.webframework.datastructures.controllers.SplitUrlControllerData;
 import br.com.gom.webframework.datastructures.injections.DependencyInjectionInstance;
 import br.com.gom.webframework.util.WebFrameworkLogger;
+import br.com.gom.webframework.util.WebFrameworkUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -104,9 +103,19 @@ public class WebFrameworkDispatcherServlet extends HttpServlet{
         return controller;
     }
 
+    /**
+     * Chama apenas os métodos com parametros.
+     * @param controllerMethod método da controller
+     * @param controller controller que tem o método
+     * @param url URI correspondente a requisição
+     * @param data mapeamento correspondente ao metodo/requisição
+     * @param req requisição da chamada para pegar os query paramaters quando existir
+     * @return objeto retornado pelo método
+     * @throws Exception
+     */
     private Object invokeMethodWithParameters(final Method controllerMethod, final Object controller, 
         final String url, final RequestControllerData data, final HttpServletRequest req) 
-    throws JsonSyntaxException, IOException, IllegalAccessException, InvocationTargetException{
+    throws Exception{
         WebFrameworkLogger.log( MODULO_LOG, "Metodo '%s' tem '%d' parametro(s)!", controllerMethod.getName(), 
             controllerMethod.getParameterCount() );
         
@@ -120,9 +129,9 @@ public class WebFrameworkDispatcherServlet extends HttpServlet{
             if( paramMethodData.getParamAnnotation().annotationType().isAssignableFrom( WebFrameworkBody.class ) )
                 valuesToMethod[ index.getAndIncrement() ] = GSON.fromJson( this.readBytesFromRequest( req ), 
                     paramMethodData.getParamClass() );
-            else if( paramMethodData.getParamAnnotation().annotationType().isAssignableFrom( WebFrameworkPathParameter.class ) )
+            else if( paramMethodData.getParamAnnotation().annotationType().isAssignableFrom( WebFrameworkPathVariable.class ) )
                 valuesToMethod[ index.getAndIncrement() ] = mapaValores.get( paramMethodData.getParamName() );
-            else if( paramMethodData.getParamAnnotation().annotationType().isAssignableFrom( WebFrameworkRequestParameter.class ) )
+            else if( paramMethodData.getParamAnnotation().annotationType().isAssignableFrom( WebFrameworkRequestParam.class ) )
                 valuesToMethod[ index.getAndIncrement() ] = mapaValores.get( "query-" + paramMethodData.getParamName() );
             else
                 valuesToMethod[ index.getAndIncrement() ] = null;
@@ -132,6 +141,12 @@ public class WebFrameworkDispatcherServlet extends HttpServlet{
         return controllerMethod.invoke( controller, valuesToMethod );
     }
 
+    /**
+     * Escreve a saida
+     * @param returnValue objeto retornado para ser retornado
+     * @param resp response para escrever o objeto.
+     * @throws IOException exceção na escrita da saída
+     */
     private void writeReturnOut(final Object returnValue, final HttpServletResponse resp) throws IOException{
         if( returnValue == null )
             return;
@@ -196,51 +211,43 @@ public class WebFrameworkDispatcherServlet extends HttpServlet{
                 .toList().toArray( new Class<?>[0] ) );
     }
 
+    /**
+     * Extrai todos os valores passadas das variaveis da URI e dos parametros.
+     * @param url URI da requisição
+     * @param queryParameters  query parameter enviados junto da requisição
+     * @param data mapeamento da requisição/metodo configurado
+     * @return mapa de todos os valores das variaveis e dos parametros.
+     * @throws Exception
+     */
     private Map<String, Object> extractValuesFromRequest(final String url, final Map<String, String[]> queryParameters, 
-    final RequestControllerData data){
+    final RequestControllerData data) throws Exception{
         WebFrameworkLogger.log( MODULO_LOG, "\tExtraindo valores dos parametros da requisicao." );
         final Map<String, Object> mapaValores = new HashMap<>();
         if( !data.isStaticUrl() ){
             final String[] urlSplits = url.substring( 1 ).split( "/" );
             final AtomicInteger index = new AtomicInteger( 0 );
-            data.getUrlSplits().stream().forEach( item -> {
+            for( SplitUrlControllerData item : data.getUrlSplits() ){
                 final int i = index.getAndIncrement();
-                if( item.isParameter() )
-                    mapaValores.put( item.getPath(), convertStringToValue( urlSplits[ i ], 
-                        item.getParamClassFromMethod() ) );
-            } );
+                if( item.isParameter() ){
+                    // se a 'parte' a URI configurada corresponde a uma variável, extrai o valor
+                    mapaValores.put( item.getPath(), WebFrameworkUtil.convertStringToValue( 
+                        urlSplits[ i ], item.getParamClassFromMethod() ) );
+                }
+            }
         }
-        if( data.hasRequestParameterAnnotation() && queryParameters != null && !queryParameters.isEmpty() ){
-            data.getMethodParameters().stream()
-                .filter( item -> item.isRequestParameterAnnotation() && queryParameters.containsKey( item.getParamName() ) )
-                .forEach( item -> {
-                    final String[] values = queryParameters.get( item.getParamName() );
-                    mapaValores.put( "query-" + item.getParamName(), 
-                        convertStringToValue( ( ( values != null && values.length > 0 ) ? values[ 0 ] : null ), 
-                        item.getParamClass() ) );
-                } );
+        // verifica se tem alguma configuração de query param nos parametros do método
+        if( data.hasRequestParamAnnotation() && queryParameters != null && !queryParameters.isEmpty() ){
+            for( ParameterMethodControllerData item : data.getMethodParameters().stream().filter( item 
+            -> item.isRequestParameterAnnotation() && queryParameters.containsKey( item.getParamName() ) ).toList() ){
+                final String[] values = queryParameters.get( item.getParamName() );
+                // utilizo este prefixo para separar os tipos de valores (variável e parametro)
+                // para o caso de houver o mesmo nome para ambos os cenários
+                mapaValores.put( "query-" + item.getParamName(), 
+                    WebFrameworkUtil.convertStringToValue( ( ( values != null && values.length > 0 ) 
+                        ? values[ 0 ] : null ), item.getParamClass() ) );
+            }
         }
         return mapaValores;
-    }
-
-    private Object convertStringToValue(final String value, final Class<?> valueClass){
-        if( value != null && !value.strip().isEmpty() ){
-            if( Byte.class.isAssignableFrom( valueClass ) )
-                return Byte.valueOf( value );
-            else if( Integer.class.isAssignableFrom( valueClass ) )
-                return Integer.valueOf( value );
-            else if( Long.class.isAssignableFrom( valueClass ) )
-                return Long.valueOf( value );
-            else if( BigInteger.class.isAssignableFrom( valueClass ) )
-                return new BigInteger( value );
-            else if( Float.class.isAssignableFrom( valueClass ) )
-                return Float.valueOf( value );
-            else if( Double.class.isAssignableFrom( valueClass ) )
-                return Double.valueOf( value );
-            else if( BigDecimal.class.isAssignableFrom( valueClass ) )
-                return new BigDecimal( value );
-        }
-        return value;
     }
 
 }

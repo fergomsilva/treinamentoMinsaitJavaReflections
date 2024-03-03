@@ -3,10 +3,28 @@
 /WebFramework/.vscode
 /WebFramework/tomcat.8080
 /WebFramework/tomcat.*
+/WebFramework/.settings
 /MyWebTestFramework/target
 /MyWebTestFramework/.vscode
 /MyWebTestFramework/tomcat.8080
 /MyWebTestFramework/tomcat.*
+/MyWebTestFramework/.settings
+/ProjetoAvaliacaoWebFramework/.settings
+/ProjetoAvaliacaoWebFramework/bin
+/ProjetoAvaliacaoWebFramework/lib
+/ProjetoAvaliacaoWebFramework/target
+/ProjetoAvaliacaoWebFramework/.vscode
+/ProjetoAvaliacaoWebFramework/tomcat.8080
+/ProjetoAvaliacaoWebFramework/tomcat.*
+/ProjetoAvaliacaoWebFramework/.vscode
+/ProjetoAvaliacaoWebFramework/bin
+/ProjetoAvaliacaoWebFramework/lib
+/ProjetoAvaliacaoWebFramework/tomcat.8080
+/ProjetoAvaliacaoWebFramework/.classpath
+/ProjetoAvaliacaoWebFramework/.project
+
+*.classpath
+*.project
 
 # Compiled class file
 *.class
@@ -32,3 +50,4 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
